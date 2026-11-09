@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { StagePreviewPreset } from '../../app/AppProvider';
 import { calculateTreeState, createPreviewTreeState } from '../../domain/treeModel';
 import { ActiveTimerState, Habit } from '../../domain/types';
@@ -15,12 +15,12 @@ interface HabitTreeCardProps {
 
 /**
  * Компактный элемент галереи деревьев на главном экране.
- * В обычном состоянии отображается только само дерево на чистом белом фоне.
- * При наведении курсора мыши или фокусе с клавиатуры:
+ * В спокойном состоянии отображается только само дерево в чёрном силуэтном горшке на белом фоне.
+ * При наведении курсора мыши или фокусе с клавиатуры (:focus-visible):
  * — позади дерева плавно появляется круглый серо-чёрный ореол;
- * — над деревом проявляется название привычки (короткое — по центру целиком,
- *   длинное — от начала строки с плавной прокруткой после паузы и возвратом в исходное положение).
- * Никакие соседние элементы не сдвигаются.
+ * — над деревом в слоте строго фиксированной высоты (36px) проявляется стационарное название
+ *   привычки (до 2 строк, при превышении — с троеточием в конце второй строки, без бегущей строки).
+ * Появление заголовка и ореола не сдвигает соседние элементы и не меняет сетку.
  */
 export const HabitTreeCard: React.FC<HabitTreeCardProps> = ({
   habit,
@@ -31,12 +31,6 @@ export const HabitTreeCard: React.FC<HabitTreeCardProps> = ({
   onOpenHabit,
 }) => {
   const [isActive, setIsActive] = useState(false);
-  const [isOverflowing, setIsOverflowing] = useState(false);
-  const [scrollOffsetPx, setScrollOffsetPx] = useState(0);
-  const [isScrollingTitle, setIsScrollingTitle] = useState(false);
-
-  const titleContainerRef = useRef<HTMLDivElement | null>(null);
-  const titleTextRef = useRef<HTMLSpanElement | null>(null);
 
   const realTreeState = useMemo(
     () => calculateTreeState(habit, nowMs, activeTimer),
@@ -50,62 +44,6 @@ export const HabitTreeCard: React.FC<HabitTreeCardProps> = ({
     return realTreeState;
   }, [stagePreviewPreset, realTreeState]);
 
-  // Измеряем, помещается ли название целиком в область заголовка
-  useLayoutEffect(() => {
-    const checkOverflow = () => {
-      const containerEl = titleContainerRef.current;
-      const textEl = titleTextRef.current;
-      if (!containerEl || !textEl) return;
-      const overflow = textEl.scrollWidth - containerEl.clientWidth;
-      setIsOverflowing(overflow > 2);
-    };
-    checkOverflow();
-    window.addEventListener('resize', checkOverflow);
-    return () => window.removeEventListener('resize', checkOverflow);
-  }, [habit.title]);
-
-  // Логика плавной прокрутки длинного названия после небольшой паузы при наведении/фокусе
-  useEffect(() => {
-    if (!isActive) {
-      setIsScrollingTitle(false);
-      setScrollOffsetPx(0);
-      return;
-    }
-
-    const prefersReducedMotion =
-      typeof window !== 'undefined' &&
-      window.matchMedia &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-    if (prefersReducedMotion) {
-      return;
-    }
-
-    const containerEl = titleContainerRef.current;
-    const textEl = titleTextRef.current;
-    if (!containerEl || !textEl) {
-      return;
-    }
-
-    const overflowPx = textEl.scrollWidth - containerEl.clientWidth;
-    if (overflowPx <= 2) {
-      setIsScrollingTitle(false);
-      setScrollOffsetPx(0);
-      return;
-    }
-
-    const timerId = window.setTimeout(() => {
-      setIsScrollingTitle(true);
-      setScrollOffsetPx(-(overflowPx + 4));
-    }, 600);
-
-    return () => {
-      window.clearTimeout(timerId);
-    };
-  }, [isActive, habit.title]);
-
-  const scrollDurationMs = Math.max(1800, Math.abs(scrollOffsetPx) * 28);
-
   return (
     <button
       type="button"
@@ -117,38 +55,30 @@ export const HabitTreeCard: React.FC<HabitTreeCardProps> = ({
       aria-label={`${habit.title} — ${treeState.stageLabel}`}
       data-testid={`habit-card-${habit.id}`}
       data-active={isActive ? 'true' : 'false'}
-      className="group relative w-full bg-white rounded-lg p-3 sm:p-4 flex flex-col items-center justify-center cursor-pointer select-none focus-visible:outline-none"
+      className="group relative w-full max-w-[136px] sm:max-w-[146px] bg-white rounded-xl px-1 py-0.5 flex flex-col items-center justify-start cursor-pointer select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#111111]"
     >
-      {/* Фиксированная область заголовка над деревом (не сдвигает сетку при появлении) */}
+      {/* Строго фиксированный по высоте слот заголовка (36px) над деревом — гарантирует отсутствие сдвигов */}
       <div
-        ref={titleContainerRef}
         data-testid={`habit-card-title-${habit.id}`}
-        className={`w-full h-7 overflow-hidden flex items-center px-1 transition-opacity duration-200 ${
-          isOverflowing ? 'justify-start' : 'justify-center'
-        } ${isActive ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        className={`w-full h-[36px] min-h-[36px] max-h-[36px] overflow-hidden flex items-end justify-center px-0.5 pb-0.5 transition-opacity duration-150 ${
+          isActive ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
       >
         <span
-          ref={titleTextRef}
           data-testid={`habit-card-title-text-${habit.id}`}
-          style={{
-            transform: `translateX(${scrollOffsetPx}px)`,
-            transitionProperty: isScrollingTitle ? 'transform' : 'none',
-            transitionDuration: isScrollingTitle ? `${scrollDurationMs}ms` : '0ms',
-            transitionTimingFunction: 'linear',
-          }}
-          className="inline-block whitespace-nowrap text-sm font-medium text-[#111111] tracking-tight"
+          className="w-full max-h-[34px] line-clamp-2 overflow-hidden text-ellipsis break-words [overflow-wrap:anywhere] text-center text-[12px] sm:text-[13px] leading-[16px] font-medium text-[#111111] tracking-tight"
         >
           {habit.title}
         </span>
       </div>
 
-      {/* Область дерева и круглого серо-чёрного ореола позади него */}
-      <div className="relative w-full h-[200px] sm:h-[215px] flex items-center justify-center">
+      {/* Компактная область дерева и круглого серо-чёрного ореола позади него */}
+      <div className="relative w-[116px] h-[112px] sm:w-[126px] sm:h-[122px] flex items-center justify-center shrink-0">
         {/* Круглый серо-чёрный ореол с мягким затемнением позади дерева */}
         <div
           aria-hidden="true"
           data-testid={`habit-card-halo-${habit.id}`}
-          className={`absolute z-0 w-[180px] h-[180px] sm:w-[196px] sm:h-[196px] rounded-full tree-gallery-halo pointer-events-none transition-all duration-200 ${
+          className={`absolute z-0 w-[108px] h-[108px] sm:w-[118px] sm:h-[118px] rounded-full tree-gallery-halo pointer-events-none transition-all duration-150 ${
             isActive ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
           }`}
         />

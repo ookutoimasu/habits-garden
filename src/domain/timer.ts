@@ -51,9 +51,16 @@ export function getActiveTimerElapsedMs(activeTimer: ActiveTimerState, nowMs: nu
   return intervals.reduce((acc, item) => acc + Math.max(0, item.endMs - item.startMs), 0);
 }
 
+let timerCreationSeq = 0;
+
+export function getSavedSessionIdForTimer(timerId: string): string {
+  return timerId.startsWith('session_') ? timerId : `session_${timerId}`;
+}
+
 export function startNewTimer(habitId: string, nowMs: number): ActiveTimerState {
+  timerCreationSeq += 1;
   return {
-    id: `timer_${habitId}_${nowMs}`,
+    id: `timer_${habitId}_${nowMs}_${timerCreationSeq}`,
     habitId,
     startedAtMs: nowMs,
     status: 'running',

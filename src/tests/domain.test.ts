@@ -509,3 +509,62 @@ test('12. Появление новых ветвей при росте не ме
     }
   }
 });
+
+test('13. Совместимость со старым состоянием localStorage без поля activeTimer.id: назначение id и сохранение без сброса длительности, паузы, истории и роста', () => {
+  const baseMs = new Date(2026, 4, 10, 9, 0, 0).getTime();
+  let habit = createHabit({
+    id: 'habit_legacy_1',
+    title: 'Фортепиано',
+    mode: 'timer',
+    targetDaysPerWeek: 4,
+    dailyTargetMinutes: 20,
+    createdAtMs: baseMs - 7 * 86_400_000,
+    seed: 112233,
+  });
+
+  // Запишем одну прошлую сессию, чтобы убедиться, что история и рост не теряются
+  const pastStart = baseMs - 2 * 86_400_000;
+  habit = recordTimerSession(
+    habit,
+    {
+      id: 'past_sess_1',
+      habitId: habit.id,
+      startedAtMs: pastStart,
+      endedAtMs: pastStart + 25 * 60_000,
+      durationMs: 25 * 60_000,
+      intervals: [{ startMs: pastStart, endMs: pastStart + 25 * 60_000 }],
+    },
+    pastStart + 25 * 60_000
+  ).habit;
+
+  const treeBefore = calculateTreeState(habit, baseMs);
+
+  // Старый формат activeTimer без поля `id` (на паузе с накопленными 8 минутами)
+  const legacyPausedTimerWithoutId = {
+    habitId: habit.id,
+    startedAtMs: baseMs - 600_000,
+    status: 'paused',
+    accumulatedIntervals: [{ startMs: baseMs - 600_000, endMs: baseMs - 120_000 }],
+    currentSegmentStartMs: null,
+  };
+
+  const migrated = migrateStorageData({
+    version: 1,
+    hasChosenGardenMode: true,
+    gardenMode: 'personal',
+    habits: [habit],
+    activeTimer: legacyPausedTimerWithoutId,
+  });
+
+  assert.ok(migrated.activeTimer);
+  assert.equal(typeof migrated.activeTimer.id, 'string');
+  assert.ok(migrated.activeTimer.id.length > 0);
+  assert.equal(migrated.activeTimer.status, 'paused');
+  assert.equal(getActiveTimerElapsedMs(migrated.activeTimer, baseMs + 300_000), 480_000);
+  assert.equal(migrated.habits[0].sessions.length, 1);
+
+  const treeAfter = calculateTreeState(migrated.habits[0], baseMs);
+  assert.equal(treeAfter.development, treeBefore.development);
+  assert.equal(treeAfter.stage, treeBefore.stage);
+});
+

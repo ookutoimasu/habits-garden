@@ -48,9 +48,9 @@
 .tree-gallery-halo {
   background: radial-gradient(
     closest-side,
-    rgba(17, 17, 17, 0.18) 0%,
-    rgba(17, 17, 17, 0.11) 45%,
-    rgba(17, 17, 17, 0.03) 78%,
+    rgba(17, 17, 17, 0.20) 0%,
+    rgba(17, 17, 17, 0.12) 48%,
+    rgba(17, 17, 17, 0.04) 78%,
     rgba(17, 17, 17, 0) 100%
   );
 }

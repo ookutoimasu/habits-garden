@@ -12,7 +12,8 @@ interface TreeViewProps {
 }
 
 /**
- * Отрисовывает горшок, кадку или открытую землю в зависимости от стадии развития дерева.
+ * Отрисовывает лаконичный плоский чёрный силуэт горшка (#111111) без бликов,
+ * градиентов и декоративных деталей, с видимым слоем коричневой почвы у основания ствола.
  */
 const TreeContainerBase: React.FC<{
   stage: TreeStage;
@@ -22,127 +23,35 @@ const TreeContainerBase: React.FC<{
 }> = ({ stage, baseY, centerX, vitality }) => {
   const soilColor = vitality < 0.35 ? '#7D6E61' : '#4A3B31';
 
-  if (stage === 'sprout') {
-    // Маленький керамический горшок
-    return (
-      <g data-testid="pot-sprout">
-        <ellipse cx={centerX} cy={baseY + 42} rx={26} ry={3.5} fill="#EBEBEB" />
-        <path
-          d={`M ${centerX - 24} ${baseY + 4} L ${centerX + 24} ${baseY + 4} L ${centerX + 18} ${baseY + 41} L ${centerX - 18} ${baseY + 41} Z`}
-          fill="#C87D55"
-          stroke="#A6623E"
-          strokeWidth="1"
-        />
-        <rect
-          x={centerX - 27}
-          y={baseY - 2}
-          width={54}
-          height={7}
-          rx={1.5}
-          fill="#D48961"
-          stroke="#A6623E"
-          strokeWidth="1"
-        />
-        <ellipse cx={centerX} cy={baseY - 1} rx={22} ry={3} fill={soilColor} />
-      </g>
-    );
-  }
+  const dimensions: Record<
+    TreeStage,
+    { topHalf: number; bottomHalf: number; height: number; soilRx: number; soilRy: number }
+  > = {
+    sprout: { topHalf: 23, bottomHalf: 16, height: 32, soilRx: 20, soilRy: 2.6 },
+    young: { topHalf: 30, bottomHalf: 21, height: 36, soilRx: 27, soilRy: 3.1 },
+    large: { topHalf: 38, bottomHalf: 27, height: 40, soilRx: 35, soilRy: 3.6 },
+    mature: { topHalf: 46, bottomHalf: 34, height: 42, soilRx: 43, soilRy: 4.0 },
+  };
 
-  if (stage === 'young') {
-    // Средний глиняный горшок
-    return (
-      <g data-testid="pot-young">
-        <ellipse cx={centerX} cy={baseY + 48} rx={36} ry={4.5} fill="#EBEBEB" />
-        <path
-          d={`M ${centerX - 33} ${baseY + 5} L ${centerX + 33} ${baseY + 5} L ${centerX + 25} ${baseY + 47} L ${centerX - 25} ${baseY + 47} Z`}
-          fill="#B86F49"
-          stroke="#945433"
-          strokeWidth="1.1"
-        />
-        <rect
-          x={centerX - 37}
-          y={baseY - 2}
-          width={74}
-          height={8}
-          rx={2}
-          fill="#C67B54"
-          stroke="#945433"
-          strokeWidth="1.1"
-        />
-        <ellipse cx={centerX} cy={baseY - 1} rx={31} ry={3.8} fill={soilColor} />
-      </g>
-    );
-  }
+  const { topHalf, bottomHalf, height, soilRx, soilRy } = dimensions[stage];
+  const topY = baseY;
+  const bottomY = baseY + height;
 
-  if (stage === 'large') {
-    // Прочная деревянная кадка с обручами
-    return (
-      <g data-testid="pot-large">
-        <ellipse cx={centerX} cy={baseY + 52} rx={48} ry={5} fill="#EBEBEB" />
-        <path
-          d={`M ${centerX - 44} ${baseY + 1} L ${centerX + 44} ${baseY + 1} L ${centerX + 38} ${baseY + 51} L ${centerX - 38} ${baseY + 51} Z`}
-          fill="#8B6343"
-          stroke="#63442B"
-          strokeWidth="1.2"
-        />
-        {/* Вертикальные дощечки кадки */}
-        <line
-          x1={centerX - 22}
-          y1={baseY + 2}
-          x2={centerX - 19}
-          y2={baseY + 51}
-          stroke="#6E4D32"
-          strokeWidth="0.9"
-        />
-        <line
-          x1={centerX}
-          y1={baseY + 2}
-          x2={centerX}
-          y2={baseY + 51}
-          stroke="#6E4D32"
-          strokeWidth="0.9"
-        />
-        <line
-          x1={centerX + 22}
-          y1={baseY + 2}
-          x2={centerX + 19}
-          y2={baseY + 51}
-          stroke="#6E4D32"
-          strokeWidth="0.9"
-        />
-        {/* Металлические стяжные обручи */}
-        <path
-          d={`M ${centerX - 43} ${baseY + 13} L ${centerX + 43} ${baseY + 13}`}
-          stroke="#3A3A3A"
-          strokeWidth="2.8"
-        />
-        <path
-          d={`M ${centerX - 40} ${baseY + 38} L ${centerX + 40} ${baseY + 38}`}
-          stroke="#3A3A3A"
-          strokeWidth="2.8"
-        />
-        <ellipse cx={centerX} cy={baseY + 1} rx={42} ry={4.5} fill={soilColor} />
-      </g>
-    );
-  }
-
-  // Зрелое дерево в открытой земле
   return (
-    <g data-testid="pot-mature">
-      <ellipse cx={centerX} cy={baseY + 16} rx={82} ry={9} fill="#F0EFEA" />
+    <g data-testid={`pot-${stage}`}>
       <path
-        d={`M ${centerX - 76} ${baseY + 14} Q ${centerX} ${baseY - 12} ${centerX + 76} ${baseY + 14} Q ${centerX} ${baseY + 22} ${centerX - 76} ${baseY + 14} Z`}
+        data-testid="pot-silhouette"
+        d={`M ${centerX - topHalf} ${topY} L ${centerX + topHalf} ${topY} L ${centerX + bottomHalf} ${bottomY} L ${centerX - bottomHalf} ${bottomY} Z`}
+        fill="#111111"
+      />
+      <ellipse
+        data-testid="pot-soil"
+        cx={centerX}
+        cy={topY}
+        rx={soilRx}
+        ry={soilRy}
         fill={soilColor}
       />
-      {vitality >= 0.45 && (
-        <path
-          d={`M ${centerX - 64} ${baseY + 11} Q ${centerX} ${baseY - 8} ${centerX + 64} ${baseY + 11}`}
-          fill="none"
-          stroke="#4F775A"
-          strokeWidth="2.2"
-          strokeLinecap="round"
-        />
-      )}
     </g>
   );
 };
@@ -160,14 +69,18 @@ export const TreeView: React.FC<TreeViewProps> = ({
 }) => {
   const geometry = useMemo(() => generateTreeGeometry(seed, state), [seed, state]);
 
-  const heightClass =
+  // В карточке галереи убираем лишние пустые поля вокруг дерева (сохраняя запас под крупные кроны и кадки)
+  // и пропорционально уменьшаем контейнер, чтобы деревья стояли плотнее без раздувания масштаба.
+  const viewBox = size === 'card' ? '40 54 240 230' : geometry.viewBox;
+
+  const sizeClass =
     size === 'detail'
-      ? 'w-full max-w-[360px] h-[300px] sm:h-[340px]'
-      : 'w-full h-[210px] sm:h-[225px]';
+      ? 'w-full max-w-[340px] h-[280px] sm:h-[320px]'
+      : 'w-[114px] h-[110px] sm:w-[124px] sm:h-[120px]';
 
   return (
     <div
-      className={`relative flex items-center justify-center select-none ${heightClass}`}
+      className={`relative flex items-center justify-center select-none ${sizeClass}`}
       data-testid={`tree-view-${state.stage}`}
       data-stage={state.stage}
       data-vitality={state.vitality.toFixed(2)}
@@ -175,8 +88,8 @@ export const TreeView: React.FC<TreeViewProps> = ({
       data-development={state.development.toFixed(2)}
     >
       <svg
-        viewBox={geometry.viewBox}
-        className="w-full h-full overflow-visible"
+        viewBox={viewBox}
+        className="w-full h-full overflow-hidden"
         role="img"
         aria-label={
           ariaLabel ??
@@ -185,7 +98,7 @@ export const TreeView: React.FC<TreeViewProps> = ({
           )}`
         }
       >
-        {/* Основание: горшок / кадка / земля */}
+        {/* Основание: плоский чёрный силуэт горшка и коричневая почва */}
         <TreeContainerBase
           stage={geometry.stage}
           baseY={geometry.baseY}

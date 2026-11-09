@@ -1,5 +1,6 @@
 import React from 'react';
 import { AppProvider, useApp } from './AppProvider';
+import { Button } from '../components/ui/Button';
 import { GardenPage } from '../features/garden/GardenPage';
 import { HabitPage } from '../features/habits/HabitPage';
 import { SimulationPanel } from '../features/simulation/SimulationPanel';
@@ -24,12 +25,12 @@ const AppShell: React.FC = () => {
     <div className="min-h-screen bg-white text-[#111111] flex flex-col">
       {/* Верхняя шапка приложения: 3 зоны по контракту, адаптивная без горизонтального скролла */}
       <header className="w-full bg-white border-b border-[#E6E6E6]">
-        <div className="max-w-6xl mx-auto px-3 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-2 sm:gap-8">
+        <div className="max-w-5xl mx-auto px-3 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-2 sm:gap-6">
           {/* Зона 1: Название приложения */}
           <button
             type="button"
             onClick={() => selectHabit(null)}
-            className="text-sm sm:text-lg font-medium tracking-tight text-[#111111] whitespace-nowrap shrink-0 cursor-pointer text-left"
+            className="text-sm sm:text-lg font-medium tracking-tight text-[#111111] whitespace-nowrap shrink-0 cursor-pointer text-left rounded-full px-2 py-1 hover:bg-[#F4F4F6] transition-colors"
           >
             Habits Garden
           </button>
@@ -37,49 +38,39 @@ const AppShell: React.FC = () => {
           {/* Зона 2: Переключение Личный сад / Демонстрационный сад */}
           <nav
             aria-label="Режим сада"
-            className="flex items-center gap-3 sm:gap-6 text-xs sm:text-sm font-normal text-[#666666]"
+            className="flex items-center gap-1.5 sm:gap-2"
           >
-            <button
-              type="button"
+            <Button
+              variant={gardenMode === 'personal' ? 'selected' : 'ghost'}
+              size="sm"
               onClick={() => chooseGardenMode('personal')}
               data-testid="nav-personal-garden"
-              className={`min-h-[38px] transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-                gardenMode === 'personal'
-                  ? 'text-[#111111] font-medium underline underline-offset-4'
-                  : 'hover:text-[#111111]'
-              }`}
+              aria-pressed={gardenMode === 'personal'}
             >
               Личный сад
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant={gardenMode === 'demo' ? 'selected' : 'ghost'}
+              size="sm"
               onClick={() => chooseGardenMode('demo')}
               data-testid="nav-demo-garden"
-              className={`min-h-[38px] transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-                gardenMode === 'demo'
-                  ? 'text-[#111111] font-medium underline underline-offset-4'
-                  : 'hover:text-[#111111]'
-              }`}
+              aria-pressed={gardenMode === 'demo'}
             >
               Демо-сад
-            </button>
+            </Button>
           </nav>
 
           {/* Зона 3: Тоггл закрытой по умолчанию панели проверки времени */}
           <div className="flex items-center shrink-0">
-            <button
-              type="button"
+            <Button
+              variant={isSimulationOpen ? 'selected' : 'secondary'}
+              size="sm"
               onClick={() => (isSimulationOpen ? exitSimulation() : enterSimulation())}
               data-testid="toggle-simulation-btn"
               aria-expanded={isSimulationOpen}
-              className={`min-h-[38px] px-2.5 sm:px-3.5 py-1.5 text-xs font-medium rounded-md border transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-                isSimulationOpen
-                  ? 'bg-[#111111] text-white border-[#111111]'
-                  : 'bg-white text-[#111111] border-[#CCCCCC] hover:border-[#111111]'
-              }`}
             >
               {isSimulationOpen ? 'Скрыть проверку' : 'Проверка времени'}
-            </button>
+            </Button>
           </div>
         </div>
       </header>

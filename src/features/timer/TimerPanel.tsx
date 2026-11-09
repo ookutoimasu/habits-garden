@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pause, Play, Square } from 'lucide-react';
+import { Button } from '../../components/ui/Button';
 import {
   formatTimerDuration,
   getActiveTimerElapsedMs,
@@ -45,12 +46,13 @@ export const TimerPanel: React.FC<TimerPanelProps> = ({
   return (
     <section
       aria-label="Управление таймером привычки"
-      className="w-full border border-[#E6E6E6] rounded-md p-5 bg-white space-y-4"
+      className="w-full border border-[#E6E6E6] rounded-2xl p-4 sm:p-5 bg-white space-y-4"
     >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="text-xs text-[#666666]">
-            Текущая сессия {isCurrentHabitTimer && activeTimer?.status === 'paused' ? '(на паузе)' : ''}
+            Текущая сессия{' '}
+            {isCurrentHabitTimer && activeTimer?.status === 'paused' ? '(на паузе)' : ''}
           </div>
           <div
             data-testid="timer-display"
@@ -84,18 +86,21 @@ export const TimerPanel: React.FC<TimerPanelProps> = ({
 
       {/* Предупреждение, если в другой привычке запущен незавершённый таймер */}
       {!isCurrentHabitTimer && activeTimer && otherActiveHabitTitle && (
-        <div className="p-3 border border-[#E6E6E6] bg-[#FAFAFA] rounded-md flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-[#666666]">
+        <div className="p-3 border border-[#E6E6E6] bg-[#FAFAFA] rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-[#666666]">
           <span>
-            Сейчас есть незавершённый таймер в привычке «{otherActiveHabitTitle}». Запуск здесь автоматически остановит и сохранит его.
+            Сейчас есть незавершённый таймер в привычке «{otherActiveHabitTitle}». Запуск здесь
+            автоматически остановит и сохранит его.
           </span>
           {onSwitchToActiveHabit && (
-            <button
+            <Button
               type="button"
+              variant="secondary"
+              size="sm"
               onClick={onSwitchToActiveHabit}
-              className="text-[#111111] underline font-medium whitespace-nowrap cursor-pointer text-left sm:text-right"
+              className="shrink-0"
             >
               Перейти к нему
-            </button>
+            </Button>
           )}
         </div>
       )}
@@ -103,57 +108,64 @@ export const TimerPanel: React.FC<TimerPanelProps> = ({
       {/* Кнопки управления таймером */}
       <div className="flex flex-wrap items-center gap-2.5">
         {!isCurrentHabitTimer && (
-          <button
+          <Button
             type="button"
+            variant="primary"
+            size="lg"
             onClick={onStart}
             data-testid="timer-start-btn"
-            className="min-h-[46px] px-6 py-2.5 bg-[#111111] hover:bg-[#2A2A2A] text-white text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
           >
-            <Play className="w-4 h-4" />
+            <Play className="w-4 h-4 shrink-0" />
             <span>Начать</span>
-          </button>
+          </Button>
         )}
 
         {isCurrentHabitTimer && activeTimer?.status === 'running' && (
-          <button
+          <Button
             type="button"
+            variant="secondary"
+            size="lg"
             onClick={onPause}
             data-testid="timer-pause-btn"
-            className="min-h-[46px] px-5 py-2.5 bg-white hover:bg-[#F5F5F5] text-[#111111] border border-[#111111] text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
           >
-            <Pause className="w-4 h-4" />
+            <Pause className="w-4 h-4 shrink-0" />
             <span>Пауза</span>
-          </button>
+          </Button>
         )}
 
         {isCurrentHabitTimer && activeTimer?.status === 'paused' && (
-          <button
+          <Button
             type="button"
+            variant="primary"
+            size="lg"
             onClick={onResume}
             data-testid="timer-resume-btn"
-            className="min-h-[46px] px-5 py-2.5 bg-[#111111] hover:bg-[#2A2A2A] text-white text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
           >
-            <Play className="w-4 h-4" />
+            <Play className="w-4 h-4 shrink-0" />
             <span>Продолжить</span>
-          </button>
+          </Button>
         )}
 
         {isCurrentHabitTimer && (
-          <button
+          <Button
             type="button"
+            variant="secondary"
+            size="lg"
             onClick={onStop}
             data-testid="timer-stop-btn"
-            className="min-h-[46px] px-5 py-2.5 bg-white hover:bg-[#F5F5F5] text-[#111111] border border-[#CCCCCC] hover:border-[#111111] text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
           >
-            <Square className="w-4 h-4" />
+            <Square className="w-4 h-4 shrink-0" />
             <span>Стоп и сохранить</span>
-          </button>
+          </Button>
         )}
       </div>
 
       {/* Краткая сводка сохранённых сессий за сегодня */}
       {habit.sessions.length > 0 && (
-        <div className="pt-2 border-t border-[#F0F0F0] flex items-center justify-between text-xs text-[#666666] tabular-nums">
+        <div
+          data-testid="timer-sessions-count"
+          className="pt-2 border-t border-[#F0F0F0] flex flex-wrap items-center justify-between gap-2 text-xs text-[#666666] tabular-nums"
+        >
           <span>Всего сохранённых сессий: {habit.sessions.length}</span>
           <span>Короткие сессии суммируются в течение дня</span>
         </div>

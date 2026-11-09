@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Sprout } from 'lucide-react';
 import { useApp } from '../../app/AppProvider';
+import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { HabitForm } from '../habits/HabitForm';
 import { HabitTreeCard } from './HabitTreeCard';
@@ -22,16 +23,16 @@ export const GardenPage: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   return (
-    <div className="w-full max-w-6xl mx-auto px-4 sm:px-8 py-6 sm:py-10 space-y-8 bg-white">
+    <div className="w-full max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-7 space-y-5 bg-white">
       {/* При первом запуске предлагаем демонстрационный сад или начало с пустого */}
       {!hasChosenGardenMode && habits.length === 0 && (
         <section
           aria-label="Выбор начального режима сада"
           data-testid="first-launch-banner"
-          className="w-full bg-white border border-[#E6E6E6] rounded-md p-6 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6"
+          className="w-full bg-white border border-[#E6E6E6] rounded-2xl p-5 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4"
         >
-          <div className="space-y-2 max-w-xl">
-            <h2 className="text-lg font-medium text-[#111111]">
+          <div className="space-y-1.5 max-w-xl">
+            <h2 className="text-base sm:text-lg font-medium text-[#111111]">
               Добро пожаловать в Habits Garden
             </h2>
             <p className="text-sm text-[#666666] leading-relaxed">
@@ -42,53 +43,53 @@ export const GardenPage: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 shrink-0">
-            <button
-              type="button"
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <Button
+              variant="primary"
+              size="md"
               onClick={() => chooseGardenMode('demo')}
               data-testid="choose-demo-garden-btn"
-              className="min-h-[44px] px-4 py-2.5 bg-[#111111] hover:bg-[#2A2A2A] text-white text-sm font-medium rounded-md transition-colors cursor-pointer whitespace-nowrap"
             >
               Открыть демонстрационный сад
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant="secondary"
+              size="md"
               onClick={() => chooseGardenMode('personal')}
               data-testid="choose-empty-garden-btn"
-              className="min-h-[44px] px-4 py-2.5 bg-white hover:bg-[#F5F5F5] text-[#111111] border border-[#CCCCCC] hover:border-[#111111] rounded-md text-sm font-medium transition-colors cursor-pointer whitespace-nowrap"
             >
               Начать с пустого сада
-            </button>
+            </Button>
           </div>
         </section>
       )}
 
       {/* Компактная верхняя строка галереи с кнопкой добавления привычки */}
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-xl sm:text-2xl font-medium text-[#111111] tracking-tight">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-lg sm:text-xl font-medium text-[#111111] tracking-tight">
           {gardenMode === 'demo' ? 'Демонстрационный сад' : 'Сад привычек'}
         </h1>
 
-        <button
-          type="button"
+        <Button
+          variant="primary"
+          size="md"
           onClick={() => setIsAddModalOpen(true)}
           data-testid="add-habit-btn"
-          className="min-h-[40px] px-4 py-2 bg-[#111111] hover:bg-[#2A2A2A] text-white text-sm font-medium rounded-md flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-4 h-4 shrink-0" />
           <span>Добавить привычку</span>
-        </button>
+        </Button>
       </div>
 
-      {/* Галерея деревьев на чистом белом фоне */}
+      {/* Плотная галерея деревьев на чистом белом фоне */}
       {habits.length === 0 ? (
         <section
           aria-label="Пустой сад"
           data-testid="empty-garden-state"
-          className="w-full bg-white border border-[#E6E6E6] rounded-md p-10 sm:p-14 text-center flex flex-col items-center justify-center space-y-4"
+          className="w-full bg-white border border-[#E6E6E6] rounded-2xl p-8 sm:p-12 text-center flex flex-col items-center justify-center space-y-4"
         >
-          <div className="w-12 h-12 rounded-md border border-[#E6E6E6] flex items-center justify-center text-[#111111]">
-            <Sprout className="w-6 h-6" />
+          <div className="w-11 h-11 rounded-full border border-[#E6E6E6] flex items-center justify-center text-[#111111]">
+            <Sprout className="w-5 h-5" />
           </div>
           <div className="space-y-1.5 max-w-md">
             <h2 className="text-base font-medium text-[#111111]">
@@ -99,28 +100,28 @@ export const GardenPage: React.FC = () => {
               молодым ростком в маленьком горшке.
             </p>
           </div>
-          <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
-            <button
-              type="button"
+          <div className="pt-1 flex flex-wrap items-center justify-center gap-2.5">
+            <Button
+              variant="primary"
+              size="lg"
               onClick={() => setIsAddModalOpen(true)}
-              className="min-h-[44px] px-5 py-2.5 bg-[#111111] hover:bg-[#2A2A2A] text-white text-sm font-medium rounded-md transition-colors cursor-pointer whitespace-nowrap"
             >
               Посадить первую привычку
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant="secondary"
+              size="lg"
               onClick={() => chooseGardenMode('demo')}
-              className="min-h-[44px] px-4 py-2.5 bg-white hover:bg-[#F5F5F5] text-[#111111] border border-[#CCCCCC] hover:border-[#111111] rounded-md text-sm font-medium transition-colors cursor-pointer whitespace-nowrap"
             >
               Посмотреть демонстрационный сад
-            </button>
+            </Button>
           </div>
         </section>
       ) : (
         <section
           aria-label="Галерея деревьев привычек"
           data-testid="garden-grid"
-          className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-10 py-4"
+          className="grid grid-cols-[repeat(auto-fill,minmax(122px,136px))] sm:grid-cols-[repeat(auto-fill,minmax(132px,146px))] justify-center sm:justify-start justify-items-center gap-x-1.5 gap-y-1.5 sm:gap-x-2.5 sm:gap-y-2.5 py-1"
         >
           {habits.map((habit) => (
             <HabitTreeCard

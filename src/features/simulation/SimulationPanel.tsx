@@ -1,16 +1,19 @@
 import React from 'react';
 import { Clock, FastForward, RotateCcw, X } from 'lucide-react';
 import { StagePreviewPreset, useApp } from '../../app/AppProvider';
+import { Button } from '../../components/ui/Button';
 import { formatShortDateRu, toLocalDateKey } from '../../domain/calendar';
 
 const STAGE_PRESETS: Array<{ id: Exclude<StagePreviewPreset, null>; label: string }> = [
   { id: 'sprout', label: 'Росток в маленьком горшке' },
   { id: 'young', label: 'Молодое дерево' },
   { id: 'large', label: 'Крупное дерево в кадке' },
-  { id: 'mature', label: 'Зрелое дерево в земле' },
+  { id: 'mature', label: 'Зрелое дерево в кадке' },
   { id: 'wilted', label: 'Голый ствол (увядание)' },
   { id: 'recovering', label: 'Почки (восстановление)' },
 ];
+
+const SPEED_OPTIONS = [1, 10, 60] as const;
 
 /**
  * Панель проверки времени и стадий дерева.
@@ -24,6 +27,8 @@ export const SimulationPanel: React.FC = () => {
     isSimulationOpen,
     exitSimulation,
     advanceSimulationTime,
+    simSpeedMultiplier,
+    setSimSpeedMultiplier,
     simulatePlanWeek,
     simulateNeglectWeek,
     stagePreviewPreset,
@@ -39,6 +44,7 @@ export const SimulationPanel: React.FC = () => {
   const simTimeStr = new Date(nowMs).toLocaleTimeString('ru-RU', {
     hour: '2-digit',
     minute: '2-digit',
+    second: '2-digit',
   });
 
   return (
@@ -47,11 +53,11 @@ export const SimulationPanel: React.FC = () => {
       data-testid="simulation-panel"
       className="w-full bg-white border-b border-[#111111]"
     >
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E6E6E6]">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#111111]">
-              <Clock className="w-4 h-4" />
+      <div className="max-w-5xl mx-auto px-3 sm:px-6 py-3.5 space-y-3.5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-[#E6E6E6]">
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+            <span className="inline-flex items-center gap-1.5 text-sm font-medium text-[#111111]">
+              <Clock className="w-4 h-4 shrink-0" />
               <span>Режим проверки времени (изолированная копия данных)</span>
             </span>
             <span aria-hidden="true" className="text-[#8C8C8C]">
@@ -65,111 +71,129 @@ export const SimulationPanel: React.FC = () => {
             </span>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={resetSimulationToCurrentReal}
               data-testid="sim-reset-btn"
-              className="min-h-[40px] px-3 py-1.5 bg-white hover:bg-[#F5F5F5] text-[#111111] border border-[#CCCCCC] hover:border-[#111111] rounded-md text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
+              <RotateCcw className="w-3.5 h-3.5 shrink-0" />
               <span>Сбросить копию</span>
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
               onClick={exitSimulation}
               data-testid="sim-exit-btn"
-              className="min-h-[40px] px-3.5 py-1.5 bg-[#111111] hover:bg-[#2A2A2A] text-white rounded-md text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-3.5 h-3.5 shrink-0" />
               <span>Выйти к настоящим данным</span>
-            </button>
+            </Button>
           </div>
         </div>
 
-        {/* Управление шагами времени и сценариями */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Управление шагами времени, скоростью таймера и сценариями */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
           <div className="space-y-2">
-            <div className="text-xs font-medium text-[#666666]">
-              Перемотка тестовых часов и сценарии периода
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs font-medium text-[#666666]">
+                Перемотка тестовых часов и сценарии периода
+              </span>
+              <div
+                className="inline-flex items-center gap-1"
+                role="group"
+                aria-label="Скорость течения времени в симуляции"
+              >
+                <span className="text-[11px] text-[#666666] mr-1">Скорость таймера:</span>
+                {SPEED_OPTIONS.map((spd) => (
+                  <Button
+                    key={spd}
+                    variant={simSpeedMultiplier === spd ? 'selected' : 'secondary'}
+                    size="sm"
+                    onClick={() => setSimSpeedMultiplier(spd)}
+                    aria-pressed={simSpeedMultiplier === spd}
+                    data-testid={`sim-speed-${spd}x`}
+                    className="min-h-[28px] px-2.5 py-0.5 text-[11px] tabular-nums"
+                  >
+                    {spd}×
+                  </Button>
+                ))}
+              </div>
             </div>
+
             <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => advanceSimulationTime(86_400_000)}
                 data-testid="sim-step-day-btn"
-                className="min-h-[40px] px-3.5 py-1.5 bg-white hover:bg-[#F5F5F5] text-[#111111] border border-[#CCCCCC] hover:border-[#111111] rounded-md text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
               >
-                <FastForward className="w-3.5 h-3.5" />
+                <FastForward className="w-3.5 h-3.5 shrink-0" />
                 <span>+1 день вперёд</span>
-              </button>
+              </Button>
 
-              <button
-                type="button"
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => advanceSimulationTime(7 * 86_400_000)}
                 data-testid="sim-step-week-btn"
-                className="min-h-[40px] px-3.5 py-1.5 bg-white hover:bg-[#F5F5F5] text-[#111111] border border-[#CCCCCC] hover:border-[#111111] rounded-md text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
               >
-                <FastForward className="w-3.5 h-3.5" />
+                <FastForward className="w-3.5 h-3.5 shrink-0" />
                 <span>+1 неделя вперёд</span>
-              </button>
+              </Button>
 
-              <button
-                type="button"
+              <Button
+                variant="primary"
+                size="sm"
                 onClick={() => simulatePlanWeek(selectedHabitId ?? undefined)}
                 data-testid="sim-plan-week-btn"
-                className="min-h-[40px] px-3.5 py-1.5 bg-[#111111] hover:bg-[#2A2A2A] text-white rounded-md text-xs font-medium transition-colors cursor-pointer whitespace-nowrap"
               >
                 Неделя выполнения плана
-              </button>
+              </Button>
 
-              <button
-                type="button"
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={simulateNeglectWeek}
                 data-testid="sim-neglect-week-btn"
-                className="min-h-[40px] px-3.5 py-1.5 bg-white hover:bg-[#F5F5F5] text-[#111111] border border-[#111111] rounded-md text-xs font-medium transition-colors cursor-pointer whitespace-nowrap"
               >
                 Неделя без занятий
-              </button>
+              </Button>
             </div>
           </div>
 
           {/* Просмотр стадий дерева */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-medium text-[#666666]">
                 Просмотр стадий дерева (визуальный эталон)
               </span>
               {stagePreviewPreset && (
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setStagePreviewPreset(null)}
-                  className="text-xs text-[#111111] underline cursor-pointer"
+                  className="min-h-[28px] px-2.5 py-0.5 text-xs"
                 >
                   Вернуть расчёт по времени
-                </button>
+                </Button>
               )}
             </div>
             <div className="flex flex-wrap items-center gap-1.5">
               {STAGE_PRESETS.map((preset) => {
                 const isActive = stagePreviewPreset === preset.id;
                 return (
-                  <button
+                  <Button
                     key={preset.id}
-                    type="button"
-                    onClick={() =>
-                      setStagePreviewPreset(isActive ? null : preset.id)
-                    }
+                    variant={isActive ? 'selected' : 'secondary'}
+                    size="sm"
+                    onClick={() => setStagePreviewPreset(isActive ? null : preset.id)}
                     aria-pressed={isActive}
                     data-testid={`sim-stage-${preset.id}`}
-                    className={`min-h-[38px] px-3 py-1.5 rounded-md text-xs font-medium border transition-colors cursor-pointer whitespace-nowrap ${
-                      isActive
-                        ? 'bg-[#111111] text-white border-[#111111]'
-                        : 'bg-white text-[#111111] border-[#CCCCCC] hover:border-[#111111]'
-                    }`}
                   >
                     {preset.label}
-                  </button>
+                  </Button>
                 );
               })}
             </div>

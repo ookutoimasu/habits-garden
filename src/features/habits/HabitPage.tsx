@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { ArrowLeft, Check, RotateCcw, Settings2 } from 'lucide-react';
 import { useApp } from '../../app/AppProvider';
+import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { toLocalDateKey } from '../../domain/calendar';
 import {
@@ -86,39 +87,44 @@ export const HabitPage: React.FC<HabitPageProps> = ({ habit }) => {
   const showParticles = activeParticleHabitId === habit.id;
 
   return (
-    <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-8">
-      {/* Верхняя панель привычки: Назад, Название и Настройки */}
-      <div className="flex items-center justify-between gap-4 pb-4 border-b border-[#E6E6E6]">
-        <button
-          type="button"
+    <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 py-5 sm:py-7 space-y-6">
+      {/* Верхняя панель привычки: Назад, полное Название и Настройки */}
+      <div className="flex items-start sm:items-center justify-between gap-3 pb-4 border-b border-[#E6E6E6]">
+        <Button
+          variant="secondary"
+          size="md"
           onClick={() => selectHabit(null)}
           data-testid="back-to-garden-btn"
-          className="min-h-[44px] px-3.5 py-2 bg-white hover:bg-[#F5F5F5] border border-[#E6E6E6] hover:border-[#111111] rounded-md text-sm font-medium text-[#111111] flex items-center gap-2 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+          className="shrink-0"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="w-4 h-4 shrink-0" />
           <span>Назад в сад</span>
-        </button>
+        </Button>
 
-        <h1 className="text-lg sm:text-xl font-medium text-[#111111] text-center truncate">
+        <h1
+          data-testid="habit-page-title"
+          className="text-base sm:text-xl font-medium text-[#111111] text-center break-words [overflow-wrap:anywhere] flex-1 min-w-0 px-1"
+        >
           {habit.title}
         </h1>
 
-        <button
-          type="button"
+        <Button
+          variant="secondary"
+          size="md"
           onClick={() => setIsSettingsOpen(true)}
           data-testid="habit-settings-btn"
           aria-label="Настройки привычки"
-          className="min-h-[44px] px-3.5 py-2 bg-white hover:bg-[#F5F5F5] border border-[#E6E6E6] hover:border-[#111111] rounded-md text-sm font-medium text-[#111111] flex items-center gap-2 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+          className="shrink-0"
         >
-          <Settings2 className="w-4 h-4" />
+          <Settings2 className="w-4 h-4 shrink-0" />
           <span className="hidden sm:inline">Настройки</span>
-        </button>
+        </Button>
       </div>
 
       {/* Крупное живое дерево и сведения о привычке */}
       <section
         aria-label="Состояние дерева привычки"
-        className="w-full bg-white border border-[#E6E6E6] rounded-md p-6 sm:p-8 flex flex-col items-center justify-center"
+        className="w-full bg-white border border-[#E6E6E6] rounded-2xl p-5 sm:p-7 flex flex-col items-center justify-center"
       >
         <TreeView
           seed={habit.seed}
@@ -128,7 +134,7 @@ export const HabitPage: React.FC<HabitPageProps> = ({ habit }) => {
         />
 
         {/* Спокойная текстовая сводка стадии, типа привычки, цели и общего выполнения */}
-        <div className="mt-5 pt-4 border-t border-[#F0F0F0] w-full flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-[#666666] tabular-nums">
+        <div className="mt-4 pt-3.5 border-t border-[#F0F0F0] w-full flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-[#666666] tabular-nums">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className="font-medium text-[#111111]" data-testid="tree-stage-label">
               {treeState.stageLabel}
@@ -167,7 +173,7 @@ export const HabitPage: React.FC<HabitPageProps> = ({ habit }) => {
       {habit.mode === 'check' ? (
         <section
           aria-label="Отметка выполнения за сегодня"
-          className="w-full border border-[#E6E6E6] rounded-md p-5 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+          className="w-full border border-[#E6E6E6] rounded-2xl p-4 sm:p-5 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-4"
         >
           <div className="space-y-1">
             <div className="text-sm font-medium text-[#111111]">
@@ -183,33 +189,29 @@ export const HabitPage: React.FC<HabitPageProps> = ({ habit }) => {
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-            <button
-              type="button"
+            <Button
+              variant={todayStatus.isCompleted ? 'secondary' : 'primary'}
+              size="lg"
               onClick={() => checkInToday(habit.id)}
               aria-pressed={todayStatus.isCompleted}
               data-testid="checkin-today-btn"
-              className={`min-h-[46px] px-5 py-2.5 rounded-md text-sm font-medium flex items-center justify-center gap-2 transition-colors whitespace-nowrap cursor-pointer ${
-                todayStatus.isCompleted
-                  ? 'bg-[#F4F4F4] text-[#111111] border border-[#CCCCCC]'
-                  : 'bg-[#111111] hover:bg-[#2A2A2A] text-white'
-              }`}
             >
-              <Check className="w-4 h-4" />
+              <Check className="w-4 h-4 shrink-0" />
               <span>
                 {todayStatus.isCompleted ? 'Выполнено сегодня' : 'Отметить выполнение'}
               </span>
-            </button>
+            </Button>
 
             {todayStatus.isCompleted && (
-              <button
-                type="button"
+              <Button
+                variant="secondary"
+                size="lg"
                 onClick={() => undoCheckInToday(habit.id)}
                 data-testid="undo-checkin-btn"
-                className="min-h-[46px] px-4 py-2.5 bg-white hover:bg-[#F5F5F5] text-[#111111] border border-[#CCCCCC] hover:border-[#111111] rounded-md text-sm font-medium flex items-center justify-center gap-2 transition-colors cursor-pointer whitespace-nowrap"
               >
-                <RotateCcw className="w-4 h-4" />
+                <RotateCcw className="w-4 h-4 shrink-0" />
                 <span>Отменить отметку</span>
-              </button>
+              </Button>
             )}
           </div>
         </section>

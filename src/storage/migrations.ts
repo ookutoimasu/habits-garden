@@ -1,4 +1,4 @@
-import { StorageSchemaV1, TimerSession } from '../domain/types';
+import { ActiveTimerState, StorageSchemaV1, TimerInterval, TimerSession } from '../domain/types';
 
 export const CURRENT_STORAGE_VERSION = 1;
 
@@ -12,9 +12,50 @@ export function createDefaultStorageState(): StorageSchemaV1 {
   };
 }
 
+function migrateActiveTimer(rawTimer: unknown): ActiveTimerState | null {
+  if (!rawTimer || typeof rawTimer !== 'object') {
+    return null;
+  }
+  const t = rawTimer as Record<string, unknown>;
+  const habitId = String(t.habitId ?? '');
+  if (!habitId) {
+    return null;
+  }
+  const startedAtMs = typeof t.startedAtMs === 'number' ? t.startedAtMs : 0;
+  const status: 'running' | 'paused' = t.status === 'paused' ? 'paused' : 'running';
+  const rawIntervals = Array.isArray(t.accumulatedIntervals) ? t.accumulatedIntervals : [];
+  const accumulatedIntervals: TimerInterval[] = rawIntervals
+    .filter((iv): iv is Record<string, unknown> => Boolean(iv && typeof iv === 'object'))
+    .map((iv) => ({
+      startMs: typeof iv.startMs === 'number' ? iv.startMs : 0,
+      endMs: typeof iv.endMs === 'number' ? iv.endMs : 0,
+    }))
+    .filter((iv) => iv.endMs > iv.startMs);
+
+  const currentSegmentStartMs =
+    status === 'running' && typeof t.currentSegmentStartMs === 'number'
+      ? t.currentSegmentStartMs
+      : null;
+
+  const id =
+    typeof t.id === 'string' && t.id.trim().length > 0
+      ? t.id.trim()
+      : `legacy_timer_${habitId}_${startedAtMs}`;
+
+  return {
+    id,
+    habitId,
+    startedAtMs,
+    status,
+    accumulatedIntervals,
+    currentSegmentStartMs,
+  };
+}
+
 /**
  * Мигрирует сырые данные из localStorage к актуальной версии схемы StorageSchemaV1.
- * Полностью сохраняет существующие деревья, ранее засчитанные выполнения и параметры роста.
+ * Полностью сохраняет существующие деревья, ранее засчитанные выполнения, параметры роста
+ * и уже запущенные/приостановленные таймеры (включая старые записи без поля `activeTimer.id`).
  */
 export function migrateStorageData(raw: unknown): StorageSchemaV1 {
   if (!raw || typeof raw !== 'object') {
@@ -28,10 +69,7 @@ export function migrateStorageData(raw: unknown): StorageSchemaV1 {
     const habits = Array.isArray(record.habits) ? record.habits : [];
     const gardenMode = record.gardenMode === 'demo' ? 'demo' : 'personal';
     const hasChosenGardenMode = Boolean(record.hasChosenGardenMode);
-    const activeTimer =
-      record.activeTimer && typeof record.activeTimer === 'object'
-        ? (record.activeTimer as StorageSchemaV1['activeTimer'])
-        : null;
+    const activeTimer = migrateActiveTimer(record.activeTimer);
 
     return {
       version: 1,
