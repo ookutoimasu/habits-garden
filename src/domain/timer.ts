@@ -145,7 +145,6 @@ export function splitIntervalByLocalMidnight(
   while (cursorMs < finalEndMs) {
     const dateKey = toLocalDateKey(cursorMs);
     const dayEndMs = endOfLocalDayMs(dateKey);
-    // Следующая полночь = начало следующего дня (dayEndMs + 1)
     const nextMidnightMs = dayEndMs + 1;
     const segmentEndMs = Math.min(finalEndMs, nextMidnightMs);
     const durationMs = Math.max(0, segmentEndMs - cursorMs);
@@ -177,7 +176,9 @@ export interface DailyTimerAggregate {
 
 /**
  * Собирает все интервалы сессий (и опционально активного таймера) и распределяет их по локальным дням.
- * Вычисляет сумму за каждый день и точный момент достижения дневной цели `dailyTargetMs`.
+ * Вычисляет сумму за каждый день и точный момент достижения дневной цели.
+ * Если у прошлых сессий зафиксирован `targetMinutesAtSession`, использует его для оценки того дня,
+ * чтобы последующее изменение `dailyTargetMinutes` в настройках не пересчитывало прошлые выполнения.
  */
 export function aggregateTimerByLocalDay(
   sessions: TimerSession[],
@@ -185,37 +186,54 @@ export function aggregateTimerByLocalDay(
   activeTimer?: ActiveTimerState | null,
   nowMs?: number
 ): Map<string, DailyTimerAggregate> {
-  const dailyTargetMs = Math.max(1, dailyTargetMinutes) * 60_000;
-  const allIntervals: TimerInterval[] = [];
+  const fallbackTargetMinutes = Math.max(1, dailyTargetMinutes);
+
+  const daySegments = new Map<
+    string,
+    Array<{ startMs: number; endMs: number; durationMs: number; targetMinutes: number }>
+  >();
 
   for (const session of sessions) {
-    if (session.intervals && session.intervals.length > 0) {
-      allIntervals.push(...session.intervals);
-    } else if (session.endedAtMs > session.startedAtMs) {
-      allIntervals.push({
-        startMs: session.startedAtMs,
-        endMs: session.endedAtMs,
-      });
+    const sessionTargetMin = Math.max(
+      1,
+      session.targetMinutesAtSession ?? fallbackTargetMinutes
+    );
+    const rawIntervals =
+      session.intervals && session.intervals.length > 0
+        ? session.intervals
+        : session.endedAtMs > session.startedAtMs
+        ? [{ startMs: session.startedAtMs, endMs: session.endedAtMs }]
+        : [];
+
+    for (const interval of rawIntervals) {
+      const pieces = splitIntervalByLocalMidnight(interval);
+      for (const piece of pieces) {
+        const list = daySegments.get(piece.dateKey) ?? [];
+        list.push({
+          startMs: piece.startMs,
+          endMs: piece.endMs,
+          durationMs: piece.durationMs,
+          targetMinutes: sessionTargetMin,
+        });
+        daySegments.set(piece.dateKey, list);
+      }
     }
   }
 
   if (activeTimer && typeof nowMs === 'number') {
-    allIntervals.push(...getEffectiveIntervals(activeTimer, nowMs));
-  }
-
-  // Разбиваем все интервалы по локальным суткам и сортируем по времени начала
-  const daySegments = new Map<string, Array<{ startMs: number; endMs: number; durationMs: number }>>();
-
-  for (const interval of allIntervals) {
-    const pieces = splitIntervalByLocalMidnight(interval);
-    for (const piece of pieces) {
-      const list = daySegments.get(piece.dateKey) ?? [];
-      list.push({
-        startMs: piece.startMs,
-        endMs: piece.endMs,
-        durationMs: piece.durationMs,
-      });
-      daySegments.set(piece.dateKey, list);
+    const activeIntervals = getEffectiveIntervals(activeTimer, nowMs);
+    for (const interval of activeIntervals) {
+      const pieces = splitIntervalByLocalMidnight(interval);
+      for (const piece of pieces) {
+        const list = daySegments.get(piece.dateKey) ?? [];
+        list.push({
+          startMs: piece.startMs,
+          endMs: piece.endMs,
+          durationMs: piece.durationMs,
+          targetMinutes: fallbackTargetMinutes,
+        });
+        daySegments.set(piece.dateKey, list);
+      }
     }
   }
 
@@ -227,10 +245,11 @@ export function aggregateTimerByLocalDay(
     let goalReachedAtMs: number | null = null;
 
     for (const seg of segments) {
+      const dayTargetMs = seg.targetMinutes * 60_000;
       const prevTotal = totalDurationMs;
       totalDurationMs += seg.durationMs;
-      if (goalReachedAtMs === null && totalDurationMs >= dailyTargetMs) {
-        const neededMs = dailyTargetMs - prevTotal;
+      if (goalReachedAtMs === null && totalDurationMs >= dayTargetMs) {
+        const neededMs = dayTargetMs - prevTotal;
         goalReachedAtMs = Math.min(seg.endMs, seg.startMs + Math.max(0, neededMs));
       }
     }

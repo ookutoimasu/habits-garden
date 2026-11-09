@@ -29,7 +29,7 @@ const AppShell: React.FC = () => {
           <button
             type="button"
             onClick={() => selectHabit(null)}
-            className="text-sm sm:text-lg font-bold tracking-tight text-[#111111] whitespace-nowrap shrink-0 cursor-pointer text-left"
+            className="text-sm sm:text-lg font-medium tracking-tight text-[#111111] whitespace-nowrap shrink-0 cursor-pointer text-left"
           >
             Habits Garden
           </button>
@@ -37,7 +37,7 @@ const AppShell: React.FC = () => {
           {/* Зона 2: Переключение Личный сад / Демонстрационный сад */}
           <nav
             aria-label="Режим сада"
-            className="flex items-center gap-3 sm:gap-6 text-xs sm:text-sm font-medium text-[#666666]"
+            className="flex items-center gap-3 sm:gap-6 text-xs sm:text-sm font-normal text-[#666666]"
           >
             <button
               type="button"
@@ -45,7 +45,7 @@ const AppShell: React.FC = () => {
               data-testid="nav-personal-garden"
               className={`min-h-[38px] transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                 gardenMode === 'personal'
-                  ? 'text-[#111111] font-semibold underline underline-offset-4'
+                  ? 'text-[#111111] font-medium underline underline-offset-4'
                   : 'hover:text-[#111111]'
               }`}
             >
@@ -57,7 +57,7 @@ const AppShell: React.FC = () => {
               data-testid="nav-demo-garden"
               className={`min-h-[38px] transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                 gardenMode === 'demo'
-                  ? 'text-[#111111] font-semibold underline underline-offset-4'
+                  ? 'text-[#111111] font-medium underline underline-offset-4'
                   : 'hover:text-[#111111]'
               }`}
             >

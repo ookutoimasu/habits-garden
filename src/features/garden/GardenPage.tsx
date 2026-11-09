@@ -22,16 +22,16 @@ export const GardenPage: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   return (
-    <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-8">
+    <div className="w-full max-w-6xl mx-auto px-4 sm:px-8 py-6 sm:py-10 space-y-8 bg-white">
       {/* При первом запуске предлагаем демонстрационный сад или начало с пустого */}
       {!hasChosenGardenMode && habits.length === 0 && (
         <section
           aria-label="Выбор начального режима сада"
           data-testid="first-launch-banner"
-          className="w-full bg-white border border-[#111111] rounded-md p-6 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6"
+          className="w-full bg-white border border-[#E6E6E6] rounded-md p-6 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6"
         >
           <div className="space-y-2 max-w-xl">
-            <h2 className="text-lg font-semibold text-[#111111]">
+            <h2 className="text-lg font-medium text-[#111111]">
               Добро пожаловать в Habits Garden
             </h2>
             <p className="text-sm text-[#666666] leading-relaxed">
@@ -63,33 +63,24 @@ export const GardenPage: React.FC = () => {
         </section>
       )}
 
-      {/* Заголовок сада и панель управления */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-4 border-b border-[#E6E6E6]">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-semibold text-[#111111] tracking-tight">
-            {gardenMode === 'demo' ? 'Демонстрационный сад' : 'Мой сад привычек'}
-          </h1>
-          <p className="text-sm text-[#666666] mt-1">
-            {gardenMode === 'demo'
-              ? 'Отдельная витрина деревьев разных стадий и режимов учёта. Личная история не затрагивается.'
-              : 'Каждое дерево развивается непрерывно во времени от регулярного выполнения вашего плана.'}
-          </p>
-        </div>
+      {/* Компактная верхняя строка галереи с кнопкой добавления привычки */}
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-xl sm:text-2xl font-medium text-[#111111] tracking-tight">
+          {gardenMode === 'demo' ? 'Демонстрационный сад' : 'Сад привычек'}
+        </h1>
 
-        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-          <button
-            type="button"
-            onClick={() => setIsAddModalOpen(true)}
-            data-testid="add-habit-btn"
-            className="min-h-[44px] px-4 py-2.5 bg-[#111111] hover:bg-[#2A2A2A] text-white text-sm font-medium rounded-md flex items-center gap-2 transition-colors cursor-pointer whitespace-nowrap"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Добавить привычку</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => setIsAddModalOpen(true)}
+          data-testid="add-habit-btn"
+          className="min-h-[40px] px-4 py-2 bg-[#111111] hover:bg-[#2A2A2A] text-white text-sm font-medium rounded-md flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Добавить привычку</span>
+        </button>
       </div>
 
-      {/* Сетка деревьев в горшках или пустое состояние */}
+      {/* Галерея деревьев на чистом белом фоне */}
       {habits.length === 0 ? (
         <section
           aria-label="Пустой сад"
@@ -100,7 +91,7 @@ export const GardenPage: React.FC = () => {
             <Sprout className="w-6 h-6" />
           </div>
           <div className="space-y-1.5 max-w-md">
-            <h2 className="text-base font-semibold text-[#111111]">
+            <h2 className="text-base font-medium text-[#111111]">
               В вашем саду пока нет деревьев
             </h2>
             <p className="text-sm text-[#666666]">
@@ -127,9 +118,9 @@ export const GardenPage: React.FC = () => {
         </section>
       ) : (
         <section
-          aria-label="Коллекция деревьев привычек"
+          aria-label="Галерея деревьев привычек"
           data-testid="garden-grid"
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
+          className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-10 py-4"
         >
           {habits.map((habit) => (
             <HabitTreeCard

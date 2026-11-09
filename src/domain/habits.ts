@@ -55,12 +55,54 @@ export function createHabit(params: CreateHabitParams): Habit {
     mode: params.mode,
     targetDaysPerWeek: targetDays,
     dailyTargetMinutes: dailyMinutes,
+    growthTargetDays: targetDays,
     createdAtMs: params.createdAtMs,
     createdDateKey,
     seed,
     checks: [],
     sessions: [],
     rewardedDateKeys: [],
+  };
+}
+
+/**
+ * Чистая функция обновления настроек привычки (название, целевое число дней в неделю, целевые минуты).
+ * Не меняет накопленный рост (`growthTargetDays`) и фиксирует прежнюю норму минут на уже записанных сессиях,
+ * чтобы изменение настроек цели никогда не пересчитывало прошлое и не меняло состояние дерева.
+ */
+export function applyHabitSettingsUpdate(
+  habit: Habit,
+  params: {
+    title?: string;
+    targetDaysPerWeek?: number;
+    dailyTargetMinutes?: number;
+  }
+): Habit {
+  const nextTitle =
+    params.title !== undefined ? params.title.trim() || habit.title : habit.title;
+  const nextTargetDays =
+    params.targetDaysPerWeek !== undefined
+      ? Math.min(7, Math.max(1, Math.round(params.targetDaysPerWeek)))
+      : habit.targetDaysPerWeek;
+  const nextDailyMinutes =
+    params.dailyTargetMinutes !== undefined
+      ? Math.max(1, Math.round(params.dailyTargetMinutes))
+      : habit.dailyTargetMinutes;
+
+  const preservedGrowthTargetDays = habit.growthTargetDays ?? habit.targetDaysPerWeek;
+  const preservedSessions = habit.sessions.map((s) =>
+    s.targetMinutesAtSession !== undefined
+      ? s
+      : { ...s, targetMinutesAtSession: habit.dailyTargetMinutes }
+  );
+
+  return {
+    ...habit,
+    title: nextTitle,
+    targetDaysPerWeek: nextTargetDays,
+    dailyTargetMinutes: nextDailyMinutes,
+    growthTargetDays: preservedGrowthTargetDays,
+    sessions: preservedSessions,
   };
 }
 
@@ -188,7 +230,12 @@ export function recordTimerSession(
     return { habit, shouldTriggerParticles: false, didChange: false };
   }
 
-  const nextSessions = [...habit.sessions, session];
+  const sessionWithTarget: TimerSession = {
+    ...session,
+    targetMinutesAtSession: session.targetMinutesAtSession ?? habit.dailyTargetMinutes,
+  };
+
+  const nextSessions = [...habit.sessions, sessionWithTarget];
   const aggregates = aggregateTimerByLocalDay(
     nextSessions,
     habit.dailyTargetMinutes,
@@ -282,7 +329,6 @@ export function getPeriodInfo(
 
   const todayDateKey = toLocalDateKey(nowMs);
   const isTodayCompleted = completedMap.has(todayDateKey);
-  // Сколько дней в этом периоде ещё могут быть выполнены (включая сегодня, если сегодня ещё не выполнен)
   let remainingPossibleDays = 0;
   for (let i = 0; i < 7; i++) {
     const dKey = addDaysToDateKey(bounds.startDateKey, i);

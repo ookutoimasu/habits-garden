@@ -7,6 +7,7 @@ import {
   toLocalDateKey,
 } from '../domain/calendar';
 import {
+  applyHabitSettingsUpdate,
   checkInHabitForDay,
   createHabit,
   getDayStatus,
@@ -68,11 +69,9 @@ test('2. Пауза, продолжение и остановка таймера
 
   const t0 = new Date(2026, 4, 10, 10, 0, 0).getTime();
   let timer = startNewTimer('h1', t0);
-  // 10 минут работы
   timer = pauseActiveTimer(timer, t0 + 10 * 60_000);
   assert.equal(getActiveTimerElapsedMs(timer, t0 + 25 * 60_000), 10 * 60_000);
 
-  // Продолжаем через 15 минут паузы и работаем ещё 5 минут
   timer = resumeActiveTimer(timer, t0 + 25 * 60_000);
   const session = stopActiveTimer(timer, t0 + 30 * 60_000);
   assert.ok(session);
@@ -91,7 +90,6 @@ test('3. Сумма нескольких коротких сессий за де
   });
   const dateKey = toLocalDateKey(dayStart);
 
-  // Сессия 1: 8 минут
   const t1 = startNewTimer(habit.id, dayStart + 60_000);
   const s1 = stopActiveTimer(t1, dayStart + 9 * 60_000)!;
   const r1 = recordTimerSession(habit, s1, dayStart + 9 * 60_000);
@@ -99,7 +97,6 @@ test('3. Сумма нескольких коротких сессий за де
   assert.equal(r1.shouldTriggerParticles, false);
   assert.equal(getDayStatus(habit, dateKey, dayStart + 10 * 60_000).isCompleted, false);
 
-  // Сессия 2: 7 минут (в сумме 15 из 20)
   const t2 = startNewTimer(habit.id, dayStart + 20 * 60_000);
   const s2 = stopActiveTimer(t2, dayStart + 27 * 60_000)!;
   const r2 = recordTimerSession(habit, s2, dayStart + 27 * 60_000);
@@ -107,7 +104,6 @@ test('3. Сумма нескольких коротких сессий за де
   assert.equal(r2.shouldTriggerParticles, false);
   assert.equal(getDayStatus(habit, dateKey, dayStart + 28 * 60_000).isCompleted, false);
 
-  // Сессия 3: 6 минут (в сумме 21 из 20 -> цель достигнута!)
   const t3 = startNewTimer(habit.id, dayStart + 40 * 60_000);
   const s3 = stopActiveTimer(t3, dayStart + 46 * 60_000)!;
   const r3 = recordTimerSession(habit, s3, dayStart + 46 * 60_000);
@@ -115,7 +111,6 @@ test('3. Сумма нескольких коротких сессий за де
   assert.equal(r3.shouldTriggerParticles, true);
   assert.equal(getDayStatus(habit, dateKey, dayStart + 46 * 60_000).isCompleted, true);
 
-  // Повторная попытка сохранить ту же сессию не дублирует её
   const dup = recordTimerSession(habit, s3, dayStart + 47 * 60_000);
   assert.equal(dup.didChange, false);
   assert.equal(dup.shouldTriggerParticles, false);
@@ -125,7 +120,6 @@ test('4. Переход таймера через локальную полно�
   const day1Key = '2026-05-10';
   const day2Key = '2026-05-11';
   const day1End = endOfLocalDayMs(day1Key);
-  // Начинаем за 10 минут до полуночи и заканчиваем через 15 минут после полуночи
   const startMs = day1End - 10 * 60_000 + 1;
   const endMs = day1End + 1 + 15 * 60_000;
 
@@ -163,21 +157,17 @@ test('5. Отсутствие двойного выполнения и отсу�
     createdAtMs: nowMs - 3_600_000,
   });
 
-  // Первая отметка: выполнение засчитано, золотые частицы показаны
   const first = checkInHabitForDay(habit, todayKey, nowMs);
   habit = first.habit;
   assert.equal(first.didChange, true);
   assert.equal(first.shouldTriggerParticles, true);
   assert.equal(habit.checks.length, 1);
 
-  // Повторное нажатие: не добавляет второе выполнение и не запускает частицы
   const second = checkInHabitForDay(habit, todayKey, nowMs + 5000);
   assert.equal(second.didChange, false);
   assert.equal(second.shouldTriggerParticles, false);
   assert.equal(second.habit.checks.length, 1);
 
-  // Отмена ошибочной отметки и повторная отметка в тот же день:
-  // выполнение возвращается, но золотые частицы повторно не воспроизводятся
   const undone = undoCheckInHabitForDay(habit, todayKey);
   habit = undone.habit;
   assert.equal(habit.checks.length, 0);
@@ -203,7 +193,6 @@ test('6. Отсутствие скачка дерева сразу после о
   const { habit: habitAfter } = checkInHabitForDay(habitBefore, checkDateKey, checkMomentMs);
   const stateImmediatelyAfterCheck = calculateTreeState(habitAfter, checkMomentMs);
 
-  // В момент самой отметки скачок размера, жизненности и кроны равен строго 0
   assert.equal(
     stateImmediatelyAfterCheck.development.toFixed(6),
     stateBeforeCheck.development.toFixed(6)
@@ -217,7 +206,6 @@ test('6. Отсутствие скачка дерева сразу после о
     stateBeforeCheck.canopyRecovery.toFixed(6)
   );
 
-  // А через 24 часа после отметки дерево плавно выросло
   const stateNextDay = calculateTreeState(habitAfter, checkMomentMs + 24 * 3_600_000);
   assert.ok(stateNextDay.development > stateBeforeCheck.development);
 });
@@ -233,19 +221,16 @@ test('7. Отсутствие преждевременных штрафов вн
     createdAtMs: createdMs,
   });
 
-  // Прошло 4 дня без занятий внутри первого 7-дневного периода (остаётся ещё 3 дня для 3 отметок)
   const day4Ms = createdMs + 4 * 86_400_000;
   const stateAtCreation = calculateTreeState(habit3, createdMs);
   const stateAtDay4 = calculateTreeState(habit3, day4Ms);
 
-  // Жизненность и крона НЕ оштрафованы преждевременно
   assert.equal(stateAtDay4.vitality, stateAtCreation.vitality);
   assert.equal(stateAtDay4.canopyRecovery, stateAtCreation.canopyRecovery);
 
   const periodAtDay4 = getPeriodInfo(habit3, toLocalDateKey(day4Ms), day4Ms);
   assert.equal(periodAtDay4.remainingPossibleDays >= 3, true);
 
-  // Сравним выполнение плана 3 из 3 и 7 из 7 за 2 недели
   let habit7 = createHabit({
     title: 'План 7 из 7',
     mode: 'check',
@@ -266,7 +251,6 @@ test('7. Отсутствие преждевременных штрафов вн
   const state3Full = calculateTreeState(habit3, evalMs);
   const state7Full = calculateTreeState(habit7, evalMs);
 
-  // Развитие при выполнении 3 из 3 практически идентично 7 из 7
   assert.ok(Math.abs(state3Full.development - state7Full.development) < 0.35);
 });
 
@@ -280,15 +264,13 @@ test('8. Постепенное увядание до голого ствола 
     createdAtMs: createdMs,
   });
 
-  // 19 дней полного отсутствия занятий -> голый ствол (vitality = 0, canopyRecovery = 0), но дерево сохранено
   const neglectedMs = createdMs + 19 * 86_400_000;
   const wiltedState = calculateTreeState(habit, neglectedMs);
   assert.equal(wiltedState.vitality, 0);
   assert.equal(wiltedState.canopyRecovery, 0);
   assert.ok(wiltedState.development >= 4.0);
 
-  // Теперь выполняем план 4 дня в неделю на протяжении 3 недель (21 день)
-  const recoveryStartDayIdx = 21; // начало 4-го периода
+  const recoveryStartDayIdx = 21;
   for (let w = 0; w < 3; w++) {
     for (const offset of [0, 2, 4, 5]) {
       const dayIdx = recoveryStartDayIdx + w * 7 + offset;
@@ -298,13 +280,11 @@ test('8. Постепенное увядание до голого ствола 
     }
   }
 
-  // В середине восстановления (через 1 неделю) видны почки и частичная крона
   const midRecoveryMs = startOfLocalDayMs(addDaysToDateKey(startDayKey, recoveryStartDayIdx + 7));
   const midState = calculateTreeState(habit, midRecoveryMs);
   assert.ok(midState.canopyRecovery > 0.25 && midState.canopyRecovery < 0.75);
   assert.ok(midState.budFactor > 0.4);
 
-  // Через 3 недели соблюдения плана дерево полностью восстановило крону и жизненность
   const fullRecoveryMs = startOfLocalDayMs(addDaysToDateKey(startDayKey, recoveryStartDayIdx + 21));
   const recoveredState = calculateTreeState(habit, fullRecoveryMs);
   assert.ok(recoveredState.vitality >= 0.95);
@@ -339,4 +319,193 @@ test('9. Изоляция копии симуляции и постоянств�
 
   assert.equal(originalStorage.habits[0].title, 'Медитация');
   assert.equal(originalStorage.habits[0].checks.length, 0);
+});
+
+test('10. Смена цели 3 → 7 и 7 → 3 у выросшего дерева не пересчитывает прошлое и сохраняет рост, стадию и внешний вид', () => {
+  const startDayKey = '2026-04-01';
+  const createdMs = startOfLocalDayMs(startDayKey) + 9 * 3_600_000;
+  let habit = createHabit({
+    title: 'Скетчинг',
+    mode: 'check',
+    targetDaysPerWeek: 3,
+    createdAtMs: createdMs,
+    seed: 3391027,
+  });
+
+  // Выращиваем молодое дерево за 5 недель выполнения плана 3 дня в неделю
+  for (let w = 0; w < 5; w++) {
+    for (const dOffset of [0, 2, 4]) {
+      const dKey = addDaysToDateKey(startDayKey, w * 7 + dOffset);
+      const evMs = startOfLocalDayMs(dKey) + 10 * 3_600_000;
+      habit = checkInHabitForDay(habit, dKey, evMs).habit;
+    }
+  }
+
+  const checkTimeMs = createdMs + 35 * 86_400_000;
+  const stateBefore = calculateTreeState(habit, checkTimeMs);
+  assert.equal(stateBefore.stage, 'young');
+  const geomBefore = generateTreeGeometry(habit.seed, stateBefore);
+
+  // Переключаем цель с 3 на 7 занятий в неделю
+  const habitGoal7 = applyHabitSettingsUpdate(habit, { targetDaysPerWeek: 7 });
+  assert.equal(habitGoal7.targetDaysPerWeek, 7);
+  const stateGoal7 = calculateTreeState(habitGoal7, checkTimeMs);
+
+  assert.equal(stateGoal7.development, stateBefore.development);
+  assert.equal(stateGoal7.vitality, stateBefore.vitality);
+  assert.equal(stateGoal7.canopyRecovery, stateBefore.canopyRecovery);
+  assert.equal(stateGoal7.stage, 'young');
+  assert.deepEqual(generateTreeGeometry(habitGoal7.seed, stateGoal7).branches, geomBefore.branches);
+
+  // Сохраняем и перезагружаем через миграцию хранилища
+  const reloadedStorage = migrateStorageData(
+    JSON.parse(
+      JSON.stringify({
+        version: 1,
+        hasChosenGardenMode: true,
+        gardenMode: 'personal',
+        habits: [habitGoal7],
+        activeTimer: null,
+      })
+    )
+  );
+  const reloadedHabit = reloadedStorage.habits[0];
+  const stateAfterReload = calculateTreeState(reloadedHabit, checkTimeMs);
+  assert.equal(stateAfterReload.development, stateBefore.development);
+  assert.equal(stateAfterReload.stage, 'young');
+
+  // Переключаем обратно с 7 на 3
+  const habitBackTo3 = applyHabitSettingsUpdate(reloadedHabit, { targetDaysPerWeek: 3 });
+  const stateBackTo3 = calculateTreeState(habitBackTo3, checkTimeMs);
+  assert.equal(stateBackTo3.development, stateBefore.development);
+  assert.equal(stateBackTo3.stage, 'young');
+
+  // Новое выполнение после смены цели продолжает давать рост по прежним правилам
+  const nextDayKey = toLocalDateKey(checkTimeMs);
+  const afterNewCheck = checkInHabitForDay(habitGoal7, nextDayKey, checkTimeMs).habit;
+  const stateAfterNewGrowth = calculateTreeState(afterNewCheck, checkTimeMs + 24 * 3_600_000);
+  assert.ok(stateAfterNewGrowth.development > stateBefore.development);
+});
+
+test('11. Увеличение и уменьшение целевого количества минут таймера не пересчитывает прошлое и не меняет дерево', () => {
+  const startDayKey = '2026-04-01';
+  const createdMs = startOfLocalDayMs(startDayKey) + 9 * 3_600_000;
+  let habit = createHabit({
+    title: 'Чтение с таймером',
+    mode: 'timer',
+    targetDaysPerWeek: 3,
+    dailyTargetMinutes: 20,
+    createdAtMs: createdMs,
+    seed: 554433,
+  });
+
+  // Записываем 5 недель сессий по 20 минут + один день с 12 минутами (неполный)
+  for (let w = 0; w < 5; w++) {
+    for (const dOffset of [0, 2, 4]) {
+      const dKey = addDaysToDateKey(startDayKey, w * 7 + dOffset);
+      const sStart = startOfLocalDayMs(dKey) + 11 * 3_600_000;
+      const sEnd = sStart + 20 * 60_000;
+      habit = recordTimerSession(
+        habit,
+        {
+          id: `s_${w}_${dOffset}`,
+          habitId: habit.id,
+          startedAtMs: sStart,
+          endedAtMs: sEnd,
+          durationMs: 20 * 60_000,
+          intervals: [{ startMs: sStart, endMs: sEnd }],
+        },
+        sEnd
+      ).habit;
+    }
+  }
+  // Неполная 12-минутная сессия в отдельный день
+  const partialDayKey = addDaysToDateKey(startDayKey, 1);
+  const pStart = startOfLocalDayMs(partialDayKey) + 14 * 3_600_000;
+  habit = recordTimerSession(
+    habit,
+    {
+      id: 's_partial_12m',
+      habitId: habit.id,
+      startedAtMs: pStart,
+      endedAtMs: pStart + 12 * 60_000,
+      durationMs: 12 * 60_000,
+      intervals: [{ startMs: pStart, endMs: pStart + 12 * 60_000 }],
+    },
+    pStart + 12 * 60_000
+  ).habit;
+
+  const checkTimeMs = createdMs + 35 * 86_400_000;
+  const stateOriginal = calculateTreeState(habit, checkTimeMs);
+
+  // Увеличиваем дневную цель минут с 20 до 60
+  const habitIncreasedMin = applyHabitSettingsUpdate(habit, { dailyTargetMinutes: 60 });
+  assert.equal(habitIncreasedMin.dailyTargetMinutes, 60);
+  const stateIncreased = calculateTreeState(habitIncreasedMin, checkTimeMs);
+  assert.equal(stateIncreased.development, stateOriginal.development);
+  assert.equal(stateIncreased.vitality, stateOriginal.vitality);
+  assert.equal(stateIncreased.canopyRecovery, stateOriginal.canopyRecovery);
+  assert.equal(stateIncreased.stage, stateOriginal.stage);
+
+  // Уменьшаем дневную цель минут с 60 до 10 (прошлая 12-минутная сессия НЕ должна задним числом стать выполненным днём)
+  const habitDecreasedMin = applyHabitSettingsUpdate(habitIncreasedMin, {
+    dailyTargetMinutes: 10,
+  });
+  assert.equal(habitDecreasedMin.dailyTargetMinutes, 10);
+  const stateDecreased = calculateTreeState(habitDecreasedMin, checkTimeMs);
+  assert.equal(stateDecreased.development, stateOriginal.development);
+  assert.equal(stateDecreased.vitality, stateOriginal.vitality);
+  assert.equal(stateDecreased.canopyRecovery, stateOriginal.canopyRecovery);
+  assert.equal(stateDecreased.stage, stateOriginal.stage);
+});
+
+test('12. Появление новых ветвей при росте не меняет параметры существующих ветвей (отсутствие скачков геометрии)', () => {
+  const seed = 4829104;
+  const basePeriod = {
+    periodIndex: 0,
+    startDateKey: '2026-05-01',
+    endDateKey: '2026-05-07',
+    startMs: 0,
+    endMs: 1,
+    completedDaysCount: 3,
+    targetDays: 4,
+    isGoalMet: false,
+    dayOfPeriod: 3,
+    remainingPossibleDays: 4,
+  };
+
+  // Проверяем плотную сетку значений development от 4.0 до 85.0 с шагом 0.05,
+  // проходя через все точки зарождения ветвей первого, второго и третьего порядков.
+  for (let dev = 4.0; dev < 85.0; dev += 0.25) {
+    const stateA = {
+      development: dev,
+      vitality: 0.95,
+      canopyRecovery: 0.95,
+      budFactor: 0.2,
+      leafDullness: 0,
+      stage: 'young' as const,
+      stageLabel: 'Молодое дерево',
+      conditionLabel: 'Здоровое живое дерево',
+      currentPeriod: basePeriod,
+    };
+    const stateB = {
+      ...stateA,
+      development: dev + 0.05,
+    };
+
+    const geomA = generateTreeGeometry(seed, stateA);
+    const geomB = generateTreeGeometry(seed, stateB);
+
+    const mapB = new Map(geomB.branches.map((b) => [b.id, b]));
+    for (const branchA of geomA.branches) {
+      const branchB = mapB.get(branchA.id);
+      assert.ok(branchB, `Ветвь ${branchA.id} должна сохраняться при росте`);
+      const deltaStart = Math.hypot(branchB.x1 - branchA.x1, branchB.y1 - branchA.y1);
+      const deltaEnd = Math.hypot(branchB.x2 - branchA.x2, branchB.y2 - branchA.y2);
+      assert.ok(
+        deltaStart < 0.5 && deltaEnd < 0.5,
+        `Ветвь ${branchA.id} не должна прыгать при dev=${dev.toFixed(2)}: deltaEnd=${deltaEnd.toFixed(3)}`
+      );
+    }
+  }
 });

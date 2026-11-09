@@ -3,17 +3,17 @@ import { CheckRecord, Habit, TimerSession } from '../domain/types';
 
 /**
  * Генерирует изолированный демонстрационный набор привычек относительно переданного `nowMs`.
- * Демонстрационные записи показывают разные стадии развития дерева и способы учёта:
- * 1. Зрелое дерево в земле (Утреннее чтение, отметка, 5 дней в неделю, ~18 недель регулярных занятий)
- * 2. Крупное дерево в кадке (Глубокая работа без отвлечений, таймер 25 мин, 4 дня в неделю, ~11 недель)
- * 3. Молодое дерево (Практика скетчинга, таймер 15 мин, 3 дня в неделю, ~5 недель)
- * 4. Росток в маленьком горшке (Вечерняя растяжка, отметка, 4 дня в неделю, создана 5 дней назад)
- * 5. Восстанавливающееся дерево (Изучение испанского языка, отметка, 3 дня в неделю — после перерыва снова распускает почки и молодую листву)
+ * Демонстрационные записи показывают разные стадии развития дерева, короткие и длинные названия
+ * и разные способы учёта:
+ * 1. Зрелое дерево в земле (Утреннее чтение книги, отметка, 5 дней в неделю, ~19 недель)
+ * 2. Крупное дерево в кадке (Глубокая сфокусированная работа без телефона и уведомлений, таймер 25 мин, 4 дня в неделю, ~11 недель)
+ * 3. Молодое дерево (Практика набросков от руки, таймер 15 мин, 3 дня в неделю, ~5 недель)
+ * 4. Росток в маленьком горшке (Вечерняя разминка спины, отметка, 4 дня в неделю, создана 4 дня назад)
+ * 5. Восстанавливающееся дерево (Чтение художественной литературы на иностранном языке, отметка, 3 дня в неделю)
  */
 export function buildDemoHabits(nowMs: number): Habit[] {
   const todayKey = toLocalDateKey(nowMs);
 
-  // Вспомогательная функция создания отметок по заданным дням внутри недель (оставляя сегодняшний день свободным для проверки пользователем)
   const generateCheckHistory = (
     startDateKey: string,
     totalWeeks: number,
@@ -36,7 +36,6 @@ export function buildDemoHabits(nowMs: number): Habit[] {
     return checks;
   };
 
-  // Вспомогательная функция генерации сессий таймера
   const generateTimerHistory = (
     habitId: string,
     startDateKey: string,
@@ -61,6 +60,7 @@ export function buildDemoHabits(nowMs: number): Habit[] {
             endedAtMs,
             durationMs,
             intervals: [{ startMs: startedAtMs, endMs: endedAtMs }],
+            targetMinutesAtSession: minutesPerSession,
           });
         }
       }
@@ -73,7 +73,7 @@ export function buildDemoHabits(nowMs: number): Habit[] {
   const matureStartMs = startOfLocalDayMs(matureStartKey) + 9 * 3_600_000;
   const matureChecks = generateCheckHistory(matureStartKey, 19, [0, 1, 2, 3, 5]);
 
-  // 2. Крупное дерево в кадке (11 недель назад, таймер)
+  // 2. Крупное дерево в кадке (11 недель назад, таймер, длинное название для демонстрации прокрутки)
   const largeStartKey = addDaysToDateKey(todayKey, -11 * 7 + 2);
   const largeStartMs = startOfLocalDayMs(largeStartKey) + 9 * 3_600_000;
   const largeSessions = generateTimerHistory(
@@ -100,7 +100,7 @@ export function buildDemoHabits(nowMs: number): Habit[] {
   const sproutStartMs = startOfLocalDayMs(sproutStartKey) + 9 * 3_600_000;
   const sproutChecks = generateCheckHistory(sproutStartKey, 1, [0, 2]);
 
-  // 5. Восстанавливающееся после увядания дерево (10 недель назад, пропуск на 7, 8 и 9 неделях, и 2 занятия на текущей 10-й неделе)
+  // 5. Восстанавливающееся после увядания дерево (10 недель назад)
   const recoveringStartKey = addDaysToDateKey(todayKey, -10 * 7 + 4);
   const recoveringStartMs = startOfLocalDayMs(recoveringStartKey) + 9 * 3_600_000;
   const recoveringChecks = generateCheckHistory(
@@ -117,6 +117,7 @@ export function buildDemoHabits(nowMs: number): Habit[] {
       mode: 'check',
       targetDaysPerWeek: 5,
       dailyTargetMinutes: 20,
+      growthTargetDays: 5,
       createdAtMs: matureStartMs,
       createdDateKey: matureStartKey,
       seed: 4829104,
@@ -126,10 +127,11 @@ export function buildDemoHabits(nowMs: number): Habit[] {
     },
     {
       id: 'demo_habit_large',
-      title: 'Глубокая работа без отвлечений',
+      title: 'Глубокая сфокусированная работа без телефона и уведомлений',
       mode: 'timer',
       targetDaysPerWeek: 4,
       dailyTargetMinutes: 25,
+      growthTargetDays: 4,
       createdAtMs: largeStartMs,
       createdDateKey: largeStartKey,
       seed: 9174628,
@@ -143,6 +145,7 @@ export function buildDemoHabits(nowMs: number): Habit[] {
       mode: 'timer',
       targetDaysPerWeek: 3,
       dailyTargetMinutes: 15,
+      growthTargetDays: 3,
       createdAtMs: youngStartMs,
       createdDateKey: youngStartKey,
       seed: 3391027,
@@ -156,6 +159,7 @@ export function buildDemoHabits(nowMs: number): Habit[] {
       mode: 'check',
       targetDaysPerWeek: 4,
       dailyTargetMinutes: 15,
+      growthTargetDays: 4,
       createdAtMs: sproutStartMs,
       createdDateKey: sproutStartKey,
       seed: 7519283,
@@ -165,10 +169,11 @@ export function buildDemoHabits(nowMs: number): Habit[] {
     },
     {
       id: 'demo_habit_recovering',
-      title: 'Чтение на иностранном языке',
+      title: 'Чтение художественной литературы на иностранном языке',
       mode: 'check',
       targetDaysPerWeek: 3,
       dailyTargetMinutes: 15,
+      growthTargetDays: 3,
       createdAtMs: recoveringStartMs,
       createdDateKey: recoveringStartKey,
       seed: 6182945,

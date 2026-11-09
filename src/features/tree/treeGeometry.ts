@@ -3,7 +3,6 @@ import { TreeBiologicalState, TreeStage } from '../../domain/types';
 
 /**
  * Детерминированный генератор псевдослучайных чисел (Mulberry32).
- * Гарантирует, что дерево с одним и тем же `seed` всегда имеет одинаковую геометрию ветвей.
  */
 export function createSeededRng(seed: number): () => number {
   let a = seed >>> 0 || 1;
@@ -13,6 +12,20 @@ export function createSeededRng(seed: number): () => number {
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
+}
+
+/**
+ * Создаёт независимый детерминированный генератор случайных чисел для конкретного узла/ветви
+ * по паре (habitSeed, nodeId). Появление новых ветвей или листьев при росте никогда
+ * не сдвигает случайные параметры уже существующих ветвей.
+ */
+export function createNodeRng(habitSeed: number, nodeId: string): () => number {
+  let hash = (2166136261 ^ (habitSeed >>> 0)) >>> 0;
+  for (let i = 0; i < nodeId.length; i++) {
+    hash ^= nodeId.charCodeAt(i);
+    hash = Math.imul(hash, 16777619) >>> 0;
+  }
+  return createSeededRng(hash || 1);
 }
 
 function clamp(val: number, min: number, max: number): number {
@@ -146,12 +159,14 @@ interface RawBudCandidate {
 /**
  * Генерирует полную детерминированную геометрию дерева на основе постоянного `seed`
  * и непрерывного биологического состояния `state`.
+ * Каждая ветвь использует собственный независимый генератор `createNodeRng(seed, branchId)`,
+ * поэтому появление новых ответвлений при росте не меняет форму уже существующих ветвей.
  */
 export function generateTreeGeometry(
   seed: number,
   state: TreeBiologicalState
 ): TreeSceneGeometry {
-  const rng = createSeededRng(seed);
+  const trunkRng = createNodeRng(seed, 'trunk_main');
   const centerX = 160;
   const baseY = 238;
 
@@ -160,7 +175,6 @@ export function generateTreeGeometry(
     TREE_CONFIG.initialDevelopment,
     TREE_CONFIG.stageThresholds.maxVisualDevelopment
   );
-  // Нормализованный прогресс развития [0..1]
   const devNorm = clamp(
     (dev - TREE_CONFIG.initialDevelopment) /
       (TREE_CONFIG.stageThresholds.maxVisualDevelopment - TREE_CONFIG.initialDevelopment),
@@ -168,7 +182,6 @@ export function generateTreeGeometry(
     1
   );
 
-  // Живая кора чуть теплее и насыщеннее, сухая — более пепельно-серо-коричневая
   const dryFactor = clamp(1 - state.vitality, 0, 1);
   const trunkColor = interpolateHexColor('#5C4033', '#6D5D53', dryFactor * 0.7);
   const branchColor = interpolateHexColor('#6B4C3B', '#77685E', dryFactor * 0.75);
@@ -179,13 +192,12 @@ export function generateTreeGeometry(
   const budCandidates: RawBudCandidate[] = [];
   const roots: RootFlareGeometry[] = [];
 
-  // Высота и толщина главного ствола плавно растут с `dev`
-  const trunkLength = 34 + Math.pow(devNorm, 0.78) * 86; // от 34px у ростка до 120px у зрелого дерева
-  const trunkBaseRadius = 2.2 + Math.pow(devNorm, 0.85) * 11.5; // от 2.2px до 13.7px
+  const trunkLength = 34 + Math.pow(devNorm, 0.78) * 86;
+  const trunkBaseRadius = 2.2 + Math.pow(devNorm, 0.85) * 11.5;
   const trunkTopRadius = Math.max(1.1, trunkBaseRadius * 0.42);
 
-  const trunkLeanDeg = (rng() - 0.5) * 10;
-  const trunkCurveOffset = (rng() - 0.5) * 18 * (0.4 + 0.6 * devNorm);
+  const trunkLeanDeg = (trunkRng() - 0.5) * 10;
+  const trunkCurveOffset = (trunkRng() - 0.5) * 18 * (0.4 + 0.6 * devNorm);
   const trunkRad = ((trunkLeanDeg - 90) * Math.PI) / 180;
 
   const trunkTopX = centerX + Math.cos(trunkRad) * trunkLength;
@@ -213,7 +225,6 @@ export function generateTreeGeometry(
     color: trunkColor,
   });
 
-  // Корневой развал у крупных и зрелых деревьев
   if (dev >= 35) {
     const rootScale = clamp((dev - 35) / 65, 0, 1);
     const leftRootX = centerX - (10 + rootScale * 18);
@@ -229,8 +240,7 @@ export function generateTreeGeometry(
     });
   }
 
-  // Верхушечные листья и почка для молодого ростка и макушки
-  const apexSpread = 22 + rng() * 12;
+  const apexSpread = 22 + trunkRng() * 12;
   budCandidates.push({
     id: 'bud_apex',
     x: trunkTopX,
@@ -239,7 +249,6 @@ export function generateTreeGeometry(
     priority: 0.98,
   });
 
-  // У самого молодого ростка всегда есть пара-тройка нежных листьев на верхушке
   leafCandidates.push(
     {
       id: 'leaf_apex_left',
@@ -247,7 +256,7 @@ export function generateTreeGeometry(
       y: trunkTopY + 2,
       angleDeg: trunkLeanDeg - apexSpread - 18,
       dropOrder: 0.08,
-      shadeVariant: rng(),
+      shadeVariant: trunkRng(),
       sizeFactor: 0.95,
     },
     {
@@ -256,22 +265,23 @@ export function generateTreeGeometry(
       y: trunkTopY + 2,
       angleDeg: trunkLeanDeg + apexSpread + 18,
       dropOrder: 0.14,
-      shadeVariant: rng(),
+      shadeVariant: trunkRng(),
       sizeFactor: 0.95,
     },
     {
       id: 'leaf_apex_top',
       x: trunkTopX,
       y: trunkTopY - 2,
-      angleDeg: trunkLeanDeg + (rng() - 0.5) * 14,
+      angleDeg: trunkLeanDeg + (trunkRng() - 0.5) * 14,
       dropOrder: 0.04,
-      shadeVariant: rng(),
+      shadeVariant: trunkRng(),
       sizeFactor: 0.88,
     }
   );
 
-  // Рекурсивная генерация скелетных ветвей (фиксированная топология от seed)
+  // Рекурсивная генерация скелетных ветвей с независимым RNG на каждую ветвь по её постоянному `branchId`
   const spawnBranch = (
+    branchId: string,
     parentX1: number,
     parentY1: number,
     parentCtrlX: number,
@@ -282,52 +292,49 @@ export function generateTreeGeometry(
     parentRadiusEnd: number,
     parentAngleDeg: number,
     depth: number,
-    branchIndex: number,
+    sideIndex: number,
     birthDev: number,
     fullSpanDev: number
   ) => {
-    // Вычисляем все случайные параметры ДО проверки birthDev,
-    // чтобы последовательность RNG никогда не сдвигалась при росте!
-    const tAttach = 0.38 + rng() * 0.52;
-    const side = branchIndex % 2 === 0 ? -1 : 1;
-    const baseAngleOffset = side * (24 + rng() * 24) + (rng() - 0.5) * 8;
-    const maxLen =
-      depth === 1
-        ? 28 + rng() * 26
-        : depth === 2
-        ? 18 + rng() * 18
-        : 10 + rng() * 12;
-    const bendFactor = (rng() - 0.5) * 12;
-    const subCount = depth === 1 ? 3 : depth === 2 ? 2 : 0;
-
-    // Параметры листьев и почек на этой ветви (фиксируем в RNG заранее)
-    const leafSlots = depth === 1 ? 3 : depth === 2 ? 4 : 5;
-    const precomputedLeafParams = Array.from({ length: leafSlots }, (_, li) => ({
-      tPos: 0.35 + (li / leafSlots) * 0.65,
-      sideSign: li % 2 === 0 ? -1 : 1,
-      angleJitter: (rng() - 0.5) * 28,
-      dropOrder: clamp(0.06 + rng() * 0.92, 0.05, 0.99),
-      shadeVariant: rng(),
-      sizeFactor: 0.78 + rng() * 0.36,
-    }));
-
-    const budPriority = 0.2 + rng() * 0.78;
-
-    // Рекурсивные параметры дочерних ветвей
-    const childSeeds = Array.from({ length: subCount }, (_, ci) => ({
-      childIndex: branchIndex * 10 + ci,
-      childBirthDev: birthDev + 6 + ci * 8 + rng() * 6,
-      childSpanDev: fullSpanDev * 0.85,
-    }));
-
     if (dev <= birthDev) {
       return;
     }
 
+    const branchRng = createNodeRng(seed, branchId);
+    const tAttach = 0.38 + branchRng() * 0.52;
+    const side = sideIndex % 2 === 0 ? -1 : 1;
+    const baseAngleOffset = side * (24 + branchRng() * 24) + (branchRng() - 0.5) * 8;
+    const maxLen =
+      depth === 1
+        ? 28 + branchRng() * 26
+        : depth === 2
+        ? 18 + branchRng() * 18
+        : 10 + branchRng() * 12;
+    const bendFactor = (branchRng() - 0.5) * 12;
+    const subCount = depth === 1 ? 3 : depth === 2 ? 2 : 0;
+
+    const leafSlots = depth === 1 ? 3 : depth === 2 ? 4 : 5;
+    const precomputedLeafParams = Array.from({ length: leafSlots }, (_, li) => ({
+      tPos: 0.35 + (li / leafSlots) * 0.65,
+      sideSign: li % 2 === 0 ? -1 : 1,
+      angleJitter: (branchRng() - 0.5) * 28,
+      dropOrder: clamp(0.06 + branchRng() * 0.92, 0.05, 0.99),
+      shadeVariant: branchRng(),
+      sizeFactor: 0.78 + branchRng() * 0.36,
+    }));
+
+    const budPriority = 0.2 + branchRng() * 0.78;
+
+    const childConfigs = Array.from({ length: subCount }, (_, ci) => ({
+      childId: `${branchId}__${ci}`,
+      childSideIndex: sideIndex + ci + 1,
+      childBirthDev: birthDev + 6 + ci * 8 + branchRng() * 6,
+      childSpanDev: fullSpanDev * 0.85,
+    }));
+
     const growthProgress = clamp((dev - birthDev) / fullSpanDev, 0, 1);
     const smoothProgress = Math.pow(growthProgress, 0.82);
 
-    // Точка на квадратичной кривой Безье родителя при параметре tAttach
     const omt = 1 - tAttach;
     const startX =
       omt * omt * parentX1 + 2 * omt * tAttach * parentCtrlX + tAttach * tAttach * parentX2;
@@ -335,7 +342,7 @@ export function generateTreeGeometry(
       omt * omt * parentY1 + 2 * omt * tAttach * parentCtrlY + tAttach * tAttach * parentY2;
 
     const currentLen = maxLen * smoothProgress * (0.55 + 0.45 * devNorm);
-    if (currentLen < 2.0) {
+    if (currentLen <= 0.05) {
       return;
     }
 
@@ -349,13 +356,13 @@ export function generateTreeGeometry(
 
     const parentRadiusAtT =
       parentRadiusStart + (parentRadiusEnd - parentRadiusStart) * tAttach;
-    const rStart = Math.max(0.8, parentRadiusAtT * 0.68 * smoothProgress);
-    const rEnd = Math.max(0.55, rStart * 0.42);
+    const rStart = Math.max(0.4, parentRadiusAtT * 0.68 * smoothProgress);
+    const rEnd = Math.max(0.25, rStart * 0.42);
 
     const color = depth === 1 ? branchColor : twigColor;
 
     branches.push({
-      id: `b_${depth}_${branchIndex}`,
+      id: branchId,
       pathD: buildTaperedBranchPath(startX, startY, rStart, ctrlX, ctrlY, endX, endY, rEnd),
       x1: startX,
       y1: startY,
@@ -365,16 +372,14 @@ export function generateTreeGeometry(
       color,
     });
 
-    // Почка на кончике ветви
     budCandidates.push({
-      id: `bud_${depth}_${branchIndex}`,
+      id: `bud_${branchId}`,
       x: endX,
       y: endY,
       angleDeg,
       priority: budPriority,
     });
 
-    // Листья вдоль ветви
     for (let li = 0; li < precomputedLeafParams.length; li++) {
       const lp = precomputedLeafParams[li];
       if (smoothProgress < lp.tPos * 0.6) continue;
@@ -384,7 +389,7 @@ export function generateTreeGeometry(
       const ly = omtL * omtL * startY + 2 * omtL * t * ctrlY + t * t * endY;
 
       leafCandidates.push({
-        id: `leaf_${depth}_${branchIndex}_${li}`,
+        id: `leaf_${branchId}_${li}`,
         x: lx,
         y: ly,
         angleDeg: angleDeg + lp.sideSign * 38 + lp.angleJitter,
@@ -394,10 +399,10 @@ export function generateTreeGeometry(
       });
     }
 
-    // Дочерние ветви
     if (depth < 3) {
-      for (const cs of childSeeds) {
+      for (const cc of childConfigs) {
         spawnBranch(
+          cc.childId,
           startX,
           startY,
           ctrlX,
@@ -408,15 +413,14 @@ export function generateTreeGeometry(
           rEnd,
           angleDeg,
           depth + 1,
-          cs.childIndex,
-          cs.childBirthDev,
-          cs.childSpanDev
+          cc.childSideIndex,
+          cc.childBirthDev,
+          cc.childSpanDev
         );
       }
     }
   };
 
-  // Запускаем 7 основных скелетных ветвей первого порядка, которые постепенно вступают по мере роста
   const primaryBranchSchedules = [
     { birthDev: 5, spanDev: 18 },
     { birthDev: 9, spanDev: 20 },
@@ -429,6 +433,7 @@ export function generateTreeGeometry(
 
   primaryBranchSchedules.forEach((sched, idx) => {
     spawnBranch(
+      `b_1_${idx}`,
       centerX,
       baseY,
       trunkCtrlX,
@@ -445,13 +450,11 @@ export function generateTreeGeometry(
     );
   });
 
-  // Палитра листвы: от свежей ботанической зелени до тусклой осенне-сухой охры при увядании
   const healthyPalette = ['#2D6A4F', '#3B7A57', '#40916C', '#52B788'];
   const dullPalette = ['#8A795D', '#9C8359', '#7E6B4F', '#A38B63'];
 
   const leaves: LeafGeometry[] = [];
   for (const cand of leafCandidates) {
-    // Лист виден, если canopyRecovery выше его порога опадения dropOrder
     if (state.canopyRecovery <= cand.dropOrder - 0.02) {
       continue;
     }
@@ -483,7 +486,6 @@ export function generateTreeGeometry(
     });
   }
 
-  // Почки: активны у молодого ростка и во время восстановления кроны после увядания
   const buds: BudGeometry[] = [];
   if (state.budFactor > 0.05 && state.vitality > 0.12) {
     for (const bCand of budCandidates) {

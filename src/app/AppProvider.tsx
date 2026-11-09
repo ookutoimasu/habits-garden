@@ -10,6 +10,7 @@ import React, {
 import { buildDemoHabits } from '../demo/demoData';
 import { addDaysToDateKey, startOfLocalDayMs, toLocalDateKey } from '../domain/calendar';
 import {
+  applyHabitSettingsUpdate,
   checkActiveTimerReward,
   checkInHabitForDay,
   createHabit,
@@ -305,17 +306,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     ) => {
       updateCurrentContext((currHabits, currTimer) => ({
         habits: currHabits.map((h) =>
-          h.id === habitId
-            ? {
-                ...h,
-                title: params.title.trim() || h.title,
-                targetDaysPerWeek: Math.min(7, Math.max(1, Math.round(params.targetDaysPerWeek))),
-                dailyTargetMinutes:
-                  params.dailyTargetMinutes !== undefined
-                    ? Math.max(1, Math.round(params.dailyTargetMinutes))
-                    : h.dailyTargetMinutes,
-              }
-            : h
+          h.id === habitId ? applyHabitSettingsUpdate(h, params) : h
         ),
         activeTimer: currTimer,
       }));

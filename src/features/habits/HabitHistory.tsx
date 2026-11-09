@@ -23,7 +23,7 @@ export const HabitHistory: React.FC<HabitHistoryProps> = ({ days, period, mode }
       {/* Сводка и границы текущего 7-дневного периода */}
       <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 pb-3.5 border-b border-[#F0F0F0]">
         <div>
-          <h3 className="text-sm font-semibold text-[#111111]">
+          <h3 className="text-sm font-medium text-[#111111]">
             Текущий семидневный период
           </h3>
           <p className="text-xs text-[#666666] mt-0.5 tabular-nums">
@@ -70,7 +70,7 @@ export const HabitHistory: React.FC<HabitHistoryProps> = ({ days, period, mode }
                 }`}
               >
                 <span className="text-[11px] opacity-80">{weekday}</span>
-                <span className="text-sm font-semibold my-1">{dayNum}</span>
+                <span className="text-sm font-medium my-1">{dayNum}</span>
                 <div className="h-4 flex items-center justify-center">
                   {day.isCompleted ? (
                     <Check className="w-3.5 h-3.5" aria-label="Выполнено" />

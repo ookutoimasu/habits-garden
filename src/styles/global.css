@@ -2,26 +2,36 @@
 @import "./tokens.css";
 
 @layer base {
-  html {
-    font-family: var(--font-sans);
+  html,
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", sans-serif;
+    font-weight: 400;
     background-color: var(--bg-primary);
     color: var(--text-primary);
     color-scheme: light;
-  }
-
-  body {
-    background-color: var(--bg-primary);
-    color: var(--text-primary);
     margin: 0;
     padding: 0;
     overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
   button,
   input,
   select,
-  textarea {
-    font-family: inherit;
+  textarea,
+  label,
+  nav,
+  span,
+  p,
+  div {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", sans-serif;
   }
 
   *:focus-visible {
@@ -32,6 +42,17 @@
 
 .tabular-nums {
   font-variant-numeric: tabular-nums;
+}
+
+/* Круглый серо-чёрный ореол позади дерева при наведении/фокусе в галерее */
+.tree-gallery-halo {
+  background: radial-gradient(
+    closest-side,
+    rgba(17, 17, 17, 0.18) 0%,
+    rgba(17, 17, 17, 0.11) 45%,
+    rgba(17, 17, 17, 0.03) 78%,
+    rgba(17, 17, 17, 0) 100%
+  );
 }
 
 @media (prefers-reduced-motion: reduce) {

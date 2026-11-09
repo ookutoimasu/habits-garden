@@ -54,7 +54,7 @@ export const TimerPanel: React.FC<TimerPanelProps> = ({
           </div>
           <div
             data-testid="timer-display"
-            className="text-3xl font-mono font-semibold text-[#111111] tracking-tight tabular-nums mt-0.5"
+            className="text-3xl font-mono font-medium text-[#111111] tracking-tight tabular-nums mt-0.5"
           >
             {formatTimerDuration(currentSessionMs)}
           </div>
@@ -63,7 +63,7 @@ export const TimerPanel: React.FC<TimerPanelProps> = ({
         <div className="text-left sm:text-right text-xs text-[#666666] space-y-1 tabular-nums">
           <div>
             Сумма за сегодня:{' '}
-            <span className="font-mono font-semibold text-[#111111]">
+            <span className="font-mono font-medium text-[#111111]">
               {formatTimerDuration(todayTotalMs)}
             </span>{' '}
             из {habit.dailyTargetMinutes}:00

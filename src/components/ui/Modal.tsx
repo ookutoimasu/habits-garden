@@ -38,7 +38,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
     >
       <div className="w-full max-w-md bg-white border border-[#E6E6E6] rounded-md p-6 shadow-sm">
         <div className="flex items-center justify-between gap-4 pb-4 border-b border-[#E6E6E6]">
-          <h2 id="modal-title" className="text-lg font-semibold text-[#111111]">
+          <h2 id="modal-title" className="text-lg font-medium text-[#111111]">
             {title}
           </h2>
           <button

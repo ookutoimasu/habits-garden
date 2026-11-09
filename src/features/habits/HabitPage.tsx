@@ -3,7 +3,12 @@ import { ArrowLeft, Check, RotateCcw, Settings2 } from 'lucide-react';
 import { useApp } from '../../app/AppProvider';
 import { Modal } from '../../components/ui/Modal';
 import { toLocalDateKey } from '../../domain/calendar';
-import { getDayStatus, getLastSevenDaysHistory } from '../../domain/habits';
+import {
+  getCompletedDaysMap,
+  getDayStatus,
+  getLastSevenDaysHistory,
+} from '../../domain/habits';
+import { formatTimerDuration, getActiveTimerElapsedMs } from '../../domain/timer';
 import { calculateTreeState, createPreviewTreeState } from '../../domain/treeModel';
 import { Habit } from '../../domain/types';
 import { TimerPanel } from '../timer/TimerPanel';
@@ -58,6 +63,21 @@ export const HabitPage: React.FC<HabitPageProps> = ({ habit }) => {
     [habit, nowMs, activeTimer]
   );
 
+  const totalCompletedDaysCount = useMemo(
+    () => getCompletedDaysMap(habit, activeTimer, nowMs).size,
+    [habit, activeTimer, nowMs]
+  );
+
+  const totalAccumulatedTimerMs = useMemo(() => {
+    if (habit.mode !== 'timer') return 0;
+    const savedMs = habit.sessions.reduce((acc, s) => acc + Math.max(0, s.durationMs), 0);
+    const activeMs =
+      activeTimer && activeTimer.habitId === habit.id
+        ? getActiveTimerElapsedMs(activeTimer, nowMs)
+        : 0;
+    return savedMs + activeMs;
+  }, [habit, activeTimer, nowMs]);
+
   const otherActiveHabit = useMemo(() => {
     if (!activeTimer || activeTimer.habitId === habit.id) return null;
     return habits.find((h) => h.id === activeTimer.habitId) ?? null;
@@ -79,7 +99,7 @@ export const HabitPage: React.FC<HabitPageProps> = ({ habit }) => {
           <span>Назад в сад</span>
         </button>
 
-        <h1 className="text-lg sm:text-xl font-semibold text-[#111111] text-center truncate">
+        <h1 className="text-lg sm:text-xl font-medium text-[#111111] text-center truncate">
           {habit.title}
         </h1>
 
@@ -95,7 +115,7 @@ export const HabitPage: React.FC<HabitPageProps> = ({ habit }) => {
         </button>
       </div>
 
-      {/* Крупное живое дерево — главный визуальный объект экрана */}
+      {/* Крупное живое дерево и сведения о привычке */}
       <section
         aria-label="Состояние дерева привычки"
         className="w-full bg-white border border-[#E6E6E6] rounded-md p-6 sm:p-8 flex flex-col items-center justify-center"
@@ -107,7 +127,7 @@ export const HabitPage: React.FC<HabitPageProps> = ({ habit }) => {
           showParticles={showParticles}
         />
 
-        {/* Спокойная текстовая подпись стадии и состояния дерева без тяжёлых индикаторов */}
+        {/* Спокойная текстовая сводка стадии, типа привычки, цели и общего выполнения */}
         <div className="mt-5 pt-4 border-t border-[#F0F0F0] w-full flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-[#666666] tabular-nums">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className="font-medium text-[#111111]" data-testid="tree-stage-label">
@@ -117,8 +137,22 @@ export const HabitPage: React.FC<HabitPageProps> = ({ habit }) => {
             <span data-testid="tree-condition-label">{treeState.conditionLabel}</span>
           </div>
 
-          <div className="flex items-center gap-x-2">
-            <span>Цель: {habit.targetDaysPerWeek} дн. за 7 дней</span>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span data-testid="habit-type-label">
+              {habit.mode === 'timer'
+                ? `Таймер (${habit.dailyTargetMinutes} мин в день)`
+                : 'Отметка за день'}
+            </span>
+            <span aria-hidden="true">·</span>
+            <span data-testid="habit-goal-label">
+              Цель: {habit.targetDaysPerWeek} дн. за 7 дней
+            </span>
+            <span aria-hidden="true">·</span>
+            <span data-testid="habit-total-summary" className="text-[#111111] font-medium">
+              {habit.mode === 'timer'
+                ? `Накоплено времени: ${formatTimerDuration(totalAccumulatedTimerMs)}`
+                : `Выполнений всего: ${totalCompletedDaysCount}`}
+            </span>
             {stagePreviewPreset && (
               <>
                 <span aria-hidden="true">·</span>
@@ -136,7 +170,7 @@ export const HabitPage: React.FC<HabitPageProps> = ({ habit }) => {
           className="w-full border border-[#E6E6E6] rounded-md p-5 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-4"
         >
           <div className="space-y-1">
-            <div className="text-sm font-semibold text-[#111111]">
+            <div className="text-sm font-medium text-[#111111]">
               {todayStatus.isCompleted
                 ? 'Выполнение за сегодня засчитано'
                 : 'Отметить выполнение за сегодня'}

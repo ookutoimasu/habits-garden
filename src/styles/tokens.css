@@ -12,6 +12,6 @@
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 8px;
-  --font-sans: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", sans-serif;
+  --font-mono: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", sans-serif;
 }

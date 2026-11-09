@@ -23,6 +23,8 @@ export interface TimerSession {
   durationMs: number;
   /** Intervals of actual work */
   intervals: TimerInterval[];
+  /** Daily target in minutes active when this session was recorded (prevents retroactive recalculation when settings change) */
+  targetMinutesAtSession?: number;
 }
 
 export interface ActiveTimerState {
@@ -40,10 +42,15 @@ export interface Habit {
   id: string;
   title: string;
   mode: TrackingMode;
-  /** Target days per 7-day period (1..7) */
+  /** Target days per 7-day period (1..7) shown in settings and period summary */
   targetDaysPerWeek: number;
   /** Daily goal in minutes (used when mode === 'timer', default e.g. 20) */
   dailyTargetMinutes: number;
+  /**
+   * Baseline biological growth parameter preserved across settings edits so changing
+   * `targetDaysPerWeek` in settings never rewrites accumulated growth or alters growth pace.
+   */
+  growthTargetDays?: number;
   /** Creation timestamp in ms */
   createdAtMs: number;
   /** Local date string YYYY-MM-DD of creation (anchor for 7-day periods) */
