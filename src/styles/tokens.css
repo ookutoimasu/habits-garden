@@ -1,0 +1,17 @@
+:root {
+  --bg-primary: #FFFFFF;
+  --bg-subtle: #FAFAFA;
+  --bg-muted: #F4F4F4;
+  --text-primary: #111111;
+  --text-secondary: #666666;
+  --text-muted: #8C8C8C;
+  --border-subtle: #E6E6E6;
+  --border-strong: #111111;
+  --gold-accent: #D4AF37;
+  --gold-soft: #F3E5AB;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --font-sans: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}

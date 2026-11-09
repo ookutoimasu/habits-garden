@@ -1,0 +1,6 @@
+{
+  "name": "Habits Garden",
+  "description": "Браузерное приложение для выращивания привычек, где каждая привычка представлена отдельным живым деревом.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
